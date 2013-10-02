@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
-using Deployer.Settings.Validity;
 using Deployer.Utils;
 
 namespace Deployer.Actions
@@ -26,7 +25,7 @@ namespace Deployer.Actions
             get { return "Restore the last backup file to the configured database"; }
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
+        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
@@ -34,15 +33,15 @@ namespace Deployer.Actions
             {
                 return loader.Load( path );
             }
-            catch
+            catch( Exception ex )
             {
-                collector.Add( new Results.Result( Results.ResultLevel.Error, "Unable to load configuration" ) );
+                logger.Error( ex, "Unable to load configuration" );
             }
 
             return null;
         }
 
-        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
+        public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             // Check connection string
             if( !string.IsNullOrEmpty( settings.ConnectionString ) )
@@ -55,11 +54,11 @@ namespace Deployer.Actions
                     }
                     catch( Exception ex )
                     {
-                        collector.Add( new Results.Result( Results.ResultLevel.Error, string.Format( "Unable to connect to any server with the given connection string.{2}Exception raised is {0}.{2}Message : {1}", ex.GetType().Name, ex.Message ) ) );
+                        logger.Error( ex, "Unable to connect to any server with the given connection string." );
                     }
                 }
             }
-            else collector.Add( new Results.Result( Results.ResultLevel.Error, "No connection string configured" ) );
+            else logger.Error( "No connection string configured" );
 
             // Check backup directory
             if( !string.IsNullOrEmpty( settings.BackupDirectory ) )
@@ -67,15 +66,15 @@ namespace Deployer.Actions
                 if( Directory.Exists( Path.GetFullPath( settings.BackupDirectory ) ) )
                 {
                     if( !Directory.EnumerateFiles( Path.GetFullPath( settings.BackupDirectory ), "*.bak" ).Any() )
-                        collector.Add( new Results.Result( Results.ResultLevel.Error, "The backup directory is empty" ) );
+                        logger.Error( "The backup directory is empty" );
                 }
-                else collector.Add( new Results.Result( Results.ResultLevel.Error, "The backup directory does not exist" ) );
+                else logger.Error( "The backup directory does not exist" );
             }
-            else collector.Add( new Results.Result( Results.ResultLevel.Error, "No backup directory configured" ) );
+            else logger.Error( "No backup directory configured" );
 
         }
 
-        public IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
+        public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
             {
@@ -109,13 +108,13 @@ namespace Deployer.Actions
                                 cmd.ExecuteNonQuery();
                             }
 
-                            return new ActionResult( Results.ResultLevel.Success, string.Format( "Restore finished" ) );
+                            logger.Info( "Restore finished" );
                         }
                     }
                 }
                 catch( Exception ex )
                 {
-                    return new ActionResult( Results.ResultLevel.Error, string.Format( "Unable to restore the database. {2}Exception raised is {0}.{2}Message : {1}", ex.GetType().Name, ex.Message, Environment.NewLine ) );
+                    logger.Error( ex, "Unable to restore the database." );
                 }
             }
         }

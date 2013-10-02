@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
-using Deployer.Settings.Validity;
 using Deployer.Utils;
 
 namespace Deployer.Actions
@@ -25,11 +24,11 @@ namespace Deployer.Actions
             get { return "Display the configuration that will be use while run and other operations"; }
         }
 
-        public void CheckSettingsValidity( Settings.ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
+        public void CheckSettingsValidity( Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
+        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
@@ -37,15 +36,15 @@ namespace Deployer.Actions
             {
                 return loader.Load( path );
             }
-            catch
+            catch( Exception ex )
             {
-                collector.Add( new Results.Result( Results.ResultLevel.Error, "Unable to load configuration" ) );
+                logger.Error( ex, "Unable to load configuration" );
             }
 
             return null;
         }
 
-        public IActionResult Run( Runner runner, Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )
+        public void Run( Runner runner, Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             if( !settings.IsNew )
             {
@@ -57,11 +56,9 @@ namespace Deployer.Actions
                 Console.WriteLine( "Assemblies to process : {0}{1}{0}", Environment.NewLine, settings.AssembliesToProcess != null && settings.AssembliesToProcess.Count > 0 ? string.Join( Environment.NewLine, settings.AssembliesToProcess ) : "(none)" );
                 Console.WriteLine( "Connection string : {0}{1}", Environment.NewLine, settings.ConnectionString );
                 TryToConnectToDB( settings.ConnectionString );
-
-                return SucceedActionResult.Result;
             }
 
-            return new ActionResult( Results.ResultLevel.Warning, "No configuration file found. Please run --setup to configure the settings" );
+            logger.Warn( "No configuration file found. Please run --setup to configure the settings" );
         }
 
 

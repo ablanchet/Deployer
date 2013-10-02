@@ -10,22 +10,25 @@ namespace Deployer.Utils
     {
         class ConsoleColorRefresher : IDisposable
         {
+            ConsoleColor _baseColor;
+
+            public ConsoleColorRefresher( ConsoleColor baseColor )
+            {
+                _baseColor = baseColor;
+            }
+
             public void Dispose()
             {
-                Console.ResetColor();
+                Console.ForegroundColor = _baseColor;
             }
         }
 
         public static IDisposable ScopeForegroundColor( ConsoleColor foregroundColor )
         {
-            Console.ForegroundColor = foregroundColor;
-            return new ConsoleColorRefresher();
-        }
+            ConsoleColor baseColor = Console.ForegroundColor;
 
-        public static IDisposable ScopeBackgroundColor( ConsoleColor backgroundColor )
-        {
-            Console.BackgroundColor = backgroundColor;
-            return new ConsoleColorRefresher();
+            Console.ForegroundColor = foregroundColor;
+            return new ConsoleColorRefresher( baseColor );
         }
     }
 }

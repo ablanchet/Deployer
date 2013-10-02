@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using CK.Core;
 using Deployer.Action;
+using Deployer.Settings;
+using Deployer.Settings.Validity;
 using Deployer.Utils;
 
 namespace Deployer.Actions
@@ -23,16 +25,24 @@ namespace Deployer.Actions
             get { return "Display the configuration that will be use while run and other operations"; }
         }
 
-        public void CheckSettingsValidity( Settings.ISettings settings, Settings.Validity.ISettingsValidityCollector collector, IActivityLogger logger )
+        public void CheckSettingsValidity( Settings.ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
         }
 
-        public Settings.ISettings LoadSettings( Settings.ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public Settings.ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
+            try
+            {
+                return loader.Load( path );
+            }
+            catch
+            {
+                collector.Add( new Results.Result( Results.ResultLevel.Error, "Unable to load configuration" ) );
+            }
 
-            return loader.Load( path );
+            return null;
         }
 
         public IActionResult Run( Runner runner, Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )

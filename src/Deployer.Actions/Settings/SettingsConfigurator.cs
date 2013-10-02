@@ -61,16 +61,24 @@ namespace Deployer.Actions
             get { return "Configure the application with a nice walkthroug"; }
         }
 
-        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger )
+        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
         }
 
-        public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
+            try
+            {
+                return loader.Load( path );
+            }
+            catch
+            {
+                collector.Add( new Results.Result( Results.ResultLevel.Error, "Unable to load configuration" ) );
+            }
 
-            return loader.Load( path );
+            return null;
         }
 
         public IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )

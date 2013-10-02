@@ -72,13 +72,15 @@ namespace Deployer
             IActionResult result = null;
             if( actionToRun != null )
             {
-                ISettings settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, extraParameters, _logger );
-
                 SettingsValidityCollector collector = new SettingsValidityCollector();
-                actionToRun.UnderlyingAction.CheckSettingsValidity( settings, collector, _logger );
-                if( collector.IsValid )
-                    return actionToRun.UnderlyingAction.Run( this, settings, extraParameters, _logger );
 
+                ISettings settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, collector, extraParameters, _logger );
+                if( settings != null )
+                {
+                    actionToRun.UnderlyingAction.CheckSettingsValidity( settings, collector, extraParameters, _logger );
+                    if( collector.IsValid )
+                        return actionToRun.UnderlyingAction.Run( this, settings, extraParameters, _logger );
+                }
                 result = new ActionResult( collector.Results );
             }
             else
@@ -118,11 +120,11 @@ namespace Deployer
                 get { return "Show the program usage. All commands available, and their descriptions"; }
             }
 
-            public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger )
+            public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
             {
             }
 
-            public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+            public ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
             {
                 return loader.Load( null );
             }

@@ -15,10 +15,10 @@ namespace Deployer.Action
 
         string Description { get; }
 
-        void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger );
+        ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger );
 
-        ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger );
-
+        void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger );
+        
         IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger );
     }
 }

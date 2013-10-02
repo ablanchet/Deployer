@@ -26,15 +26,23 @@ namespace Deployer.Actions
             get { return "Restore the last backup file to the configured database"; }
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public Settings.ISettings LoadSettings( ISettingsLoader loader, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
+            try
+            {
+                return loader.Load( path );
+            }
+            catch
+            {
+                collector.Add( new Results.Result( Results.ResultLevel.Error, "Unable to load configuration" ) );
+            }
 
-            return loader.Load( path );
+            return null;
         }
 
-        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger )
+        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IList<string> extraParameters, IActivityLogger logger )
         {
             // Check connection string
             if( !string.IsNullOrEmpty( settings.ConnectionString ) )
@@ -53,7 +61,7 @@ namespace Deployer.Actions
             }
             else collector.Add( new Results.Result( Results.ResultLevel.Error, "No connection string configured" ) );
 
-            // Check backup director
+            // Check backup directory
             if( !string.IsNullOrEmpty( settings.BackupDirectory ) )
             {
                 if( Directory.Exists( Path.GetFullPath( settings.BackupDirectory ) ) )
@@ -79,7 +87,7 @@ namespace Deployer.Actions
                         logger.Info( e.Message );
                     };
 
-                    using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "CommandRunner.Actions.Restore.RestoreFormat.sql" ) ) )
+                    using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Restore.RestoreFormat.sql" ) ) )
                     {
                         string sqlFile = sr.ReadToEnd();
                         using( var cmd = conn.CreateCommand() )

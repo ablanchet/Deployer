@@ -1,0 +1,8 @@
+﻿-- parameters 
+--	0 : Database name, 
+--	1 : Path to the backup file
+
+USE [master]
+ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE
+RESTORE DATABASE [{0}] FROM  DISK = N'{1}' WITH  FILE = 1,  NOUNLOAD,  REPLACE,  STATS = 5
+ALTER DATABASE [{0}] SET MULTI_USER

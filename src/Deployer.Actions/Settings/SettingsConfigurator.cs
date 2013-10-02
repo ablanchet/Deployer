@@ -101,7 +101,7 @@ namespace Deployer.Actions
                         b.ConnectionString = connectionString;
                         check = false;
 
-                        TryToConnectToDB( b.ConnectionString, logger );
+                        DatabaseHelper.TryToConnectToDB( b.ConnectionString, logger );
 
                         editableSettings.ConnectionString = connectionString;
                     }
@@ -131,25 +131,6 @@ namespace Deployer.Actions
                 else
                 {
                     logger.Warn( "Setup is cancelled, nothing will be saved." );
-                }
-            }
-        }
-
-        bool TryToConnectToDB( string connectionString, IActivityLogger logger )
-        {
-            using( SqlConnection conn = new SqlConnection( connectionString ) )
-            {
-                try
-                {
-                    conn.Open();
-                    logger.Info( "Test connection succeeded. The database {0} is reachable", conn.Database );
-
-                    return true;
-                }
-                catch( Exception ex )
-                {
-                    logger.Warn( ex, "Unable to connect to any server with the given connection string." );
-                    return false;
                 }
             }
         }

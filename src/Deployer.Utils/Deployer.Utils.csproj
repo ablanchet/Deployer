@@ -47,6 +47,7 @@
     <Compile Include="ColoredActivityLoggerConsoleSink.cs" />
     <Compile Include="CommandPrompt.cs" />
     <Compile Include="ConsoleHelper.cs" />
+    <Compile Include="DatabaseHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

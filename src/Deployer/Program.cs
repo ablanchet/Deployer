@@ -16,6 +16,8 @@ namespace Deployer
     {
         static void Main( string[] args )
         {
+            Console.BufferWidth = 1024;
+
             DefaultActivityLogger logger = new DefaultActivityLogger();
             logger.Tap.Register( new ColoredActivityLoggerConsoleSink() );
 

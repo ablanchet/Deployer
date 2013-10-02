@@ -55,36 +55,10 @@ namespace Deployer.Actions
                 Console.WriteLine( "Dlls to process : {0}{1}{0}", Environment.NewLine, settings.DllPaths != null && settings.DllPaths.Count > 0 ? string.Join( Environment.NewLine, settings.DllPaths.Select( p => Path.GetFullPath( p ) ) ) : "(none)" );
                 Console.WriteLine( "Assemblies to process : {0}{1}{0}", Environment.NewLine, settings.AssembliesToProcess != null && settings.AssembliesToProcess.Count > 0 ? string.Join( Environment.NewLine, settings.AssembliesToProcess ) : "(none)" );
                 Console.WriteLine( "Connection string : {0}{1}", Environment.NewLine, settings.ConnectionString );
-                TryToConnectToDB( settings.ConnectionString );
+                DatabaseHelper.TryToConnectToDB( settings.ConnectionString, logger );
             }
-
-            logger.Warn( "No configuration file found. Please run --setup to configure the settings" );
-        }
-
-
-        bool TryToConnectToDB( string connectionString )
-        {
-            using( SqlConnection conn = new SqlConnection( connectionString ) )
-            {
-                try
-                {
-                    conn.Open();
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Green ) )
-                    {
-                        Console.WriteLine( "Test connection succeeded. The database {0} is reachable", conn.Database );
-                    }
-
-                    return true;
-                }
-                catch( Exception ex )
-                {
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Yellow ) )
-                    {
-                        Console.WriteLine( "Unable to connect to any server with the given connection string.{2}Exception raised is {0}.{2}Message : {1}", ex.GetType().Name, ex.Message, Environment.NewLine );
-                    }
-                    return false;
-                }
-            }
+            else
+                logger.Warn( "No configuration file found. Please run --setup to configure the settings" );
         }
     }
 }

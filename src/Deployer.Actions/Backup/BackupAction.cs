@@ -46,17 +46,7 @@ namespace Deployer.Actions
             // Check connection string
             if( !string.IsNullOrEmpty( settings.ConnectionString ) )
             {
-                using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
-                {
-                    try
-                    {
-                        conn.Open();
-                    }
-                    catch( Exception ex )
-                    {
-                        logger.Error( ex, "Unable to connect to any server with the given connection string." );
-                    }
-                }
+                DatabaseHelper.TryToConnectToDB( settings.ConnectionString, logger );
             }
             else logger.Error( "No connection string configured" );
 

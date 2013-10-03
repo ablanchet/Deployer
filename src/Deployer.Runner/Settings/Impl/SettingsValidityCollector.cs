@@ -9,7 +9,7 @@ using Deployer.Settings.Validity;
 
 namespace Deployer.Settings.Impl
 {
-    internal class SettingsValidityCollector: ISettingsValidityCollector
+    internal class SettingsValidityCollector : ISettingsValidityCollector
     {
         List<Result> _errors;
         ReadOnlyCollection<Result> _roErrors;
@@ -20,7 +20,7 @@ namespace Deployer.Settings.Impl
             _roErrors = new ReadOnlyCollection<Result>( _errors );
         }
 
-        public bool IsValid { get { return _errors.Count == 0; } }
+        public bool IsValid { get { return !_errors.Any( m => m.Level > ResultLevel.Warning ); } }
 
         public IReadOnlyCollection<Result> Results { get { return _roErrors; } }
 

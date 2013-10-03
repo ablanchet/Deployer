@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
-using Deployer.Settings.Validity;
 using Deployer.Utils;
 
 namespace Deployer.Actions
@@ -61,7 +60,7 @@ namespace Deployer.Actions
             get { return "Configure the application with a nice walkthroug"; }
         }
 
-        public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger )
+        public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
         }
 
@@ -69,11 +68,19 @@ namespace Deployer.Actions
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
+            try
+            {
+                return loader.Load( path );
+            }
+            catch( Exception ex )
+            {
+                logger.Error( ex, "Unable to load configuration" );
+            }
 
-            return loader.Load( path );
+            return null;
         }
 
-        public IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
+        public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             if( CommandLineHelper.PromptBool( "Let's start the configuration ?", "yes" ) )
             {
@@ -94,21 +101,18 @@ namespace Deployer.Actions
                         b.ConnectionString = connectionString;
                         check = false;
 
-                        TryToConnectToDB( b.ConnectionString );
+                        DatabaseHelper.TryToConnectToDB( b.ConnectionString, logger );
 
                         editableSettings.ConnectionString = connectionString;
                     }
-                    catch( ArgumentException )
+                    catch( ArgumentException ex )
                     {
-                        using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Red ) )
-                            Console.WriteLine( "The given connection string is invalid" );
+                        logger.Error( ex, "The given connection string is invalid" );
                     }
                 }
 
                 editableSettings.DllPaths = CommandLineHelper.PromptStringArray( "Enter the dlls paths that you want to use for the dbsetup", IsValidDllPath, settings.IsNew ? (string[])null : settings.DllPaths.ToArray() );
                 editableSettings.AssembliesToProcess = CommandLineHelper.PromptStringArray( "Enter the assembly names that you want to load for the dbsetup", null, settings.IsNew ? (string[])null : settings.AssembliesToProcess.ToArray() );
-
-
 
                 if( CommandLineHelper.PromptBool( "Save ?", "yes" ) )
                 {
@@ -122,45 +126,11 @@ namespace Deployer.Actions
 
                     runner.UpdateSettings( settings, editableSettings );
 
-
-                    Console.WriteLine();
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Green ) )
-                    {
-                        Console.WriteLine( "Ok, the configuration has been saved to {0}", editableSettings.FilePath );
-                    }
+                    logger.Info( "Ok, the configuration has been saved" );
                 }
                 else
                 {
-                    Console.WriteLine();
-                    Console.WriteLine( "Setup is cancelled, nothing will be saved." );
-                    Console.ReadLine();
-                }
-            }
-
-            return SucceedActionResult.Result;
-        }
-
-        bool TryToConnectToDB( string connectionString )
-        {
-            using( SqlConnection conn = new SqlConnection( connectionString ) )
-            {
-                try
-                {
-                    conn.Open();
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Green ) )
-                    {
-                        Console.WriteLine( "Test connection succeeded. The database {0} is reachable", conn.Database );
-                    }
-
-                    return true;
-                }
-                catch( Exception ex )
-                {
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Yellow ) )
-                    {
-                        Console.WriteLine( "Unable to connect to any server with the given connection string.{2}Exception raised is {0}.{2}Message : {1}", ex.GetType().Name, ex.Message, Environment.NewLine );
-                    }
-                    return false;
+                    logger.Warn( "Setup is cancelled, nothing will be saved." );
                 }
             }
         }

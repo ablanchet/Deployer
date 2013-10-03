@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using CK.Core;
 using Deployer.Settings;
-using Deployer.Settings.Validity;
 
 namespace Deployer.Action
 {
@@ -15,10 +14,10 @@ namespace Deployer.Action
 
         string Description { get; }
 
-        void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger );
-
         ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger );
 
-        IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger );
+        void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger );
+        
+        void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger );
     }
 }

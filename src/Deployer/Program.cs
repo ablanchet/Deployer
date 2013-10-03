@@ -16,32 +16,15 @@ namespace Deployer
     {
         static void Main( string[] args )
         {
+            Console.BufferWidth = 1024;
+
             DefaultActivityLogger logger = new DefaultActivityLogger();
-            logger.Tap.Register( new ActivityLoggerConsoleSink() );
+            logger.Tap.Register( new ColoredActivityLoggerConsoleSink() );
 
             Runner runner = new Runner( logger );
             DiscoverAndRegisterActions( runner );
 
-            var result = runner.Run( args );
-
-            if( Console.CursorLeft > 0 )
-                Console.WriteLine();
-
-            foreach( var res in result.Results )
-            {
-                if( res.Level == Deployer.Results.ResultLevel.Success )
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Green ) )
-                        Console.WriteLine( "(success) " + res.Message );
-                else if( res.Level == Deployer.Results.ResultLevel.Info )
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Cyan ) )
-                        Console.WriteLine( "(info) " + res.Message );
-                else if( res.Level == Deployer.Results.ResultLevel.Warning )
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Yellow ) )
-                        Console.WriteLine( "(warn) " + res.Message );
-                else if( res.Level == Deployer.Results.ResultLevel.Error )
-                    using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Red ) )
-                        Console.WriteLine( "(err) " + res.Message );
-            }
+            runner.Run( args );
         }
 
         static void DiscoverAndRegisterActions( Runner runner )

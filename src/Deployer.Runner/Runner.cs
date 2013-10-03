@@ -4,11 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Deployer.Settings;
-using Deployer.Settings.Validity;
 using Deployer.Settings.Impl;
 using Deployer.Action;
 using Mono.Options;
-using Deployer.Results;
 using CK.Core;
 
 namespace Deployer
@@ -21,6 +19,8 @@ namespace Deployer
         List<ActionWrapper> _actions;
         OptionSet _optionSet;
         ShowHelpAction _helpAction;
+
+        int _errorCount;
 
         public Runner( IActivityLogger logger )
         {
@@ -58,35 +58,36 @@ namespace Deployer
             _optionSet.Add( wrapper.Prototype, wrapper.UnderlyingAction.Description, v => wrapper.ShouldRun = v != null );
         }
 
-        public IActionResult Run( string[] arguments )
+        public void Run( string[] arguments )
         {
             if( arguments == null || arguments.Length == 0 )
             {
                 _helpAction.Run( this, null, null, _logger );
-                return SucceedActionResult.Result;
+                return;
             }
 
             List<string> extraParameters = _optionSet.Parse( arguments );
 
             ActionWrapper actionToRun = _actions.FirstOrDefault( a => a.ShouldRun );
-            IActionResult result = null;
             if( actionToRun != null )
             {
-                ISettings settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, extraParameters, _logger );
+                ISettings settings = null;
+                using( _logger.CatchCounter( ( errorCount ) => _errorCount = errorCount ) )
+                    settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, extraParameters, _logger );
 
-                SettingsValidityCollector collector = new SettingsValidityCollector();
-                actionToRun.UnderlyingAction.CheckSettingsValidity( settings, collector, _logger );
-                if( collector.IsValid )
-                    return actionToRun.UnderlyingAction.Run( this, settings, extraParameters, _logger );
+                if( settings != null && _errorCount == 0 )
+                {
+                    using( _logger.CatchCounter( ( errorCount ) => _errorCount = errorCount ) )
+                        actionToRun.UnderlyingAction.CheckSettingsValidity( settings, extraParameters, _logger );
 
-                result = new ActionResult( collector.Results );
+                    if( _errorCount == 0 )
+                        actionToRun.UnderlyingAction.Run( this, settings, extraParameters, _logger );
+                }
             }
             else
             {
-                result = new ActionResult( ResultLevel.Error, "The command is invalid. Try -help to show usage" );
+                _logger.Error( "The command is invalid. Try -help to show usage" );
             }
-
-            return result;
         }
 
         public void UpdateSettings( ISettings source, ISettings newOnes )
@@ -118,7 +119,7 @@ namespace Deployer
                 get { return "Show the program usage. All commands available, and their descriptions"; }
             }
 
-            public void CheckSettingsValidity( ISettings settings, ISettingsValidityCollector collector, IActivityLogger logger )
+            public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
             {
             }
 
@@ -127,11 +128,12 @@ namespace Deployer
                 return loader.Load( null );
             }
 
-            public IActionResult Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
+            public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
             {
-                Console.WriteLine( "Usage informations : " );
+                string version = typeof( ShowHelpAction ).Assembly.GetName().Version.ToString( 4 );
+
+                Console.WriteLine( "Deployer (version {0}){1}  Usage informations : ", version, Environment.NewLine );
                 _commandRunner._optionSet.WriteOptionDescriptions( Console.Out );
-                return SucceedActionResult.Result;
             }
         }
     }

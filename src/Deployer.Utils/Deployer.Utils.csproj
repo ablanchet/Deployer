@@ -51,10 +51,17 @@
     <Compile Include="CommandPrompt.cs" />
     <Compile Include="ConsoleHelper.cs" />
     <Compile Include="DatabaseHelper.cs" />
+    <Compile Include="LogHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Deployer.Runner\Deployer.Runner.csproj">
+      <Project>{daa49faf-8657-45f6-810d-e6022607afad}</Project>
+      <Name>Deployer.Runner</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

@@ -130,7 +130,9 @@ namespace Deployer
 
             public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
             {
-                Console.WriteLine( "Usage informations : " );
+                string version = typeof( ShowHelpAction ).Assembly.GetName().Version.ToString( 4 );
+
+                Console.WriteLine( "Deployer (version {0}){1}  Usage informations : ", version, Environment.NewLine );
                 _commandRunner._optionSet.WriteOptionDescriptions( Console.Out );
             }
         }

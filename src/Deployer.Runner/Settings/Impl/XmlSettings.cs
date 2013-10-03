@@ -48,15 +48,17 @@ namespace Deployer.Settings.Impl
             get { return _assembliesToProcess.ToArray(); }
             set { _assembliesToProcess.Clear(); _assembliesToProcess.InsertRange( 0, value ); }
         }
+        
+        public string DBSetupConsolePath { get; set; }
 
         public string ConnectionString { get; set; }
 
-        IReadOnlyCollection<string> ISettings.DllPaths
+        IReadOnlyCollection<string> ISettings.DllDirectoryPaths
         {
             get { return _roDllPaths; }
         }
 
-        IReadOnlyCollection<string> ISettings.AssembliesToProcess
+        IReadOnlyCollection<string> ISettings.AssemblieNamesToProcess
         {
             get { return _roAssembliesToProcess; }
         }
@@ -67,9 +69,10 @@ namespace Deployer.Settings.Impl
             RootAbsoluteDirectory = newOnes.RootAbsoluteDirectory;
             BackupDirectory = newOnes.BackupDirectory;
             LogDirectory = newOnes.LogDirectory;
-            _dllPaths.Clear(); _dllPaths.InsertRange( 0, newOnes.DllPaths );
-            _assembliesToProcess.Clear(); _assembliesToProcess.InsertRange( 0, newOnes.AssembliesToProcess );
+            _dllPaths.Clear(); _dllPaths.InsertRange( 0, newOnes.DllDirectoryPaths );
+            _assembliesToProcess.Clear(); _assembliesToProcess.InsertRange( 0, newOnes.AssemblieNamesToProcess );
             ConnectionString = newOnes.ConnectionString;
+            DBSetupConsolePath = newOnes.DBSetupConsolePath;
         }
     }
 }

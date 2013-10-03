@@ -10,7 +10,7 @@ namespace Deployer.Utils
     {
         public static string PromptString( string question, string defaultAnswer = null, Func<string, bool> isValid = null )
         {
-            PrintQuestion( question, defaultAnswer );
+            PrintQuestion( question, defaultAnswer, null, false );
             string answer = Console.ReadLine();
             answer = string.IsNullOrEmpty( answer ) ? defaultAnswer : answer;
 
@@ -47,7 +47,7 @@ namespace Deployer.Utils
 
         public static bool PromptBool( string question, string defaultAnswer = null )
         {
-            PrintQuestion( question + " (y/n)", defaultAnswer );
+            PrintQuestion( question + " (y/n)", defaultAnswer, null, false );
             string rawAnswer =  Console.ReadLine();
 
             rawAnswer = string.IsNullOrEmpty( rawAnswer ) && !string.IsNullOrEmpty( defaultAnswer ) ? defaultAnswer : rawAnswer;
@@ -91,7 +91,7 @@ namespace Deployer.Utils
             return answers.ToArray();
         }
 
-        static void PrintQuestion( string question, string defaultValue = null, object[] args = null )
+        static void PrintQuestion( string question, string defaultValue = null, object[] args = null, bool breakline = true )
         {
             Console.Write( question, args );
             if( !string.IsNullOrEmpty( defaultValue ) )
@@ -100,7 +100,8 @@ namespace Deployer.Utils
             }
             Console.Write( ": " );
 
-            Console.Write( Environment.NewLine );
+            if( breakline )
+                Console.Write( Environment.NewLine );
         }
 
         static void PrintWrongAnswer( string expectedFormat )

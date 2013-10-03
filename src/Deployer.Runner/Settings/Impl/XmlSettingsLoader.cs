@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using CK.Core;
 
 namespace Deployer.Settings.Impl
 {
@@ -12,16 +13,20 @@ namespace Deployer.Settings.Impl
     {
         public const string DefaultConfigurationFileName = "Deployer.config";
 
-        public ISettings Load( string filePath )
+        public ISettings Load( string filePath, IActivityLogger logger )
         {
-            if( string.IsNullOrEmpty( filePath ) && File.Exists( DefaultConfigurationFileName ) )
-                filePath = DefaultConfigurationFileName;
-
-            if( !string.IsNullOrEmpty( filePath ) )
+            using( logger.OpenGroup( LogLevel.Info, "Loading configuration" ) )
             {
-                return LoadFromFile( filePath );
+                if( string.IsNullOrEmpty( filePath ) && File.Exists( DefaultConfigurationFileName ) )
+                    filePath = DefaultConfigurationFileName;
+
+                if( !string.IsNullOrEmpty( filePath ) )
+                {
+                    logger.Info( "Configuration file found at {0}", Path.GetFullPath( filePath ) );
+                    return LoadFromFile( filePath );
+                }
+                return new XmlSettings();
             }
-            return new XmlSettings();
         }
 
         public void Save( ISettings settings )
@@ -32,6 +37,9 @@ namespace Deployer.Settings.Impl
 
             if( string.IsNullOrEmpty( xmlSettings.FilePath ) )
                 xmlSettings.FilePath = DefaultConfigurationFileName;
+
+            if( File.Exists( xmlSettings.FilePath ) )
+                File.Delete( xmlSettings.FilePath );
 
             using( Stream fileStream = File.OpenWrite( xmlSettings.FilePath ) )
             {

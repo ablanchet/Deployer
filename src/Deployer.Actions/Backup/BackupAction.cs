@@ -31,7 +31,7 @@ namespace Deployer.Actions
             if( extraParameters.Count == 1 ) path = extraParameters[0];
             try
             {
-                return loader.Load( path );
+                return loader.Load( path, logger );
             }
             catch( Exception ex )
             {

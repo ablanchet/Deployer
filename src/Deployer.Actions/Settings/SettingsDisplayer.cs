@@ -14,11 +14,6 @@ namespace Deployer.Actions
 {
     public class SettingsDisplayer : IAction
     {
-        public IEnumerable<string> PatternMatchers
-        {
-            get { return new string[] { "d", "display-config" }; }
-        }
-
         public string Description
         {
             get { return "Display the configuration that will be use while run and other operations"; }
@@ -30,18 +25,7 @@ namespace Deployer.Actions
 
         public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
-            string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
-            try
-            {
-                return loader.Load( path, logger );
-            }
-            catch( Exception ex )
-            {
-                logger.Error( ex, "Unable to load configuration" );
-            }
-
-            return null;
+            return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
         }
 
         public void Run( Runner runner, Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -58,7 +42,7 @@ namespace Deployer.Actions
                 DatabaseHelper.TryToConnectToDB( settings.ConnectionString, logger );
             }
             else
-                logger.Warn( "No configuration file found. Please run --setup to configure the settings" );
+                logger.Warn( "No configuration file found. Please run -? to show usage and see how you can set the configuration." );
         }
     }
 }

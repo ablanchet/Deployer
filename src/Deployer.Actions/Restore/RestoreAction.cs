@@ -15,30 +15,14 @@ namespace Deployer.Actions
 {
     public class RestoreAction : IAction
     {
-        public IEnumerable<string> PatternMatchers
-        {
-            get { return new string[] { "r", "restore" }; }
-        }
-
         public string Description
         {
             get { return "Restore the last backup file to the configured database"; }
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
-            string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
-            try
-            {
-                return loader.Load( path, logger );
-            }
-            catch( Exception ex )
-            {
-                logger.Error( ex, "Unable to load configuration" );
-            }
-
-            return null;
+            return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
         }
 
         public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -66,6 +50,31 @@ namespace Deployer.Actions
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             string formatedDate = DateTime.Now.ToString( "dd-MM-yyyy HH-mm" );
+
+            FileInfo backupFile = null;
+            DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( settings.BackupDirectory ) );
+
+            // find the last backup
+            using( logger.OpenGroup( LogLevel.Info, "Looking for the last written backup file" ) )
+            {
+                using( logger.OpenGroup( LogLevel.Info, "Available backup files" ) )
+                {
+                    foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
+                    {
+                        logger.Info( bak.Name );
+                        if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
+                            backupFile = bak;
+                    }
+                }
+
+                using( logger.OpenGroup( LogLevel.Warn, "Last backup file found. Here are some details :" ) )
+                {
+                    logger.Warn( "Filename : {0}", backupFile.Name );
+                    logger.Warn( "Creation date : {0}", backupFile.CreationTime );
+                    logger.Warn( "Size : {0} mo", backupFile.Length / 1024 / 1024 );
+                }
+            }
+
             if( CommandLineHelper.PromptBool( "Are you sure you want to restore your database ? This cannot be undone !" ) )
             {
                 using( LogHelper.ReplicateIn( logger, settings, "Restores", string.Concat( "Restore-", formatedDate, ".log" ) ) )
@@ -85,19 +94,6 @@ namespace Deployer.Actions
                                 string sqlFile = sr.ReadToEnd();
                                 using( var cmd = conn.CreateCommand() )
                                 {
-                                    FileInfo backupFile = null;
-
-                                    DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( settings.BackupDirectory ) );
-
-                                    // find the last backup
-                                    foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
-                                    {
-                                        if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
-                                            backupFile = bak;
-                                    }
-
-                                    logger.Info( "Backup file to restore : {0}", backupFile.Name );
-
                                     cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFile.FullName ) );
                                     using( logger.OpenGroup( LogLevel.Info, "Starting restore of {0}", conn.Database ) )
                                     {
@@ -117,7 +113,7 @@ namespace Deployer.Actions
             }
             else
             {
-                logger.Info( "Restore aborted" );   
+                logger.Info( "Restore aborted" );
             }
         }
     }

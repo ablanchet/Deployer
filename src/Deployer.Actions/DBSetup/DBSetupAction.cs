@@ -22,11 +22,6 @@ namespace Deployer.Actions
 {
     public class DBSetupAction : IAction
     {
-        public IEnumerable<string> PatternMatchers
-        {
-            get { return new string[] { "db", "db-setup" }; }
-        }
-
         public string Description
         {
             get { return "Run the DBSetup to the configured database"; }
@@ -34,18 +29,7 @@ namespace Deployer.Actions
 
         public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
-            string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
-            try
-            {
-                return loader.Load( path, logger );
-            }
-            catch( Exception ex )
-            {
-                logger.Error( ex, "Unable to load configuration" );
-            }
-
-            return null;
+            return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
         }
 
         public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -133,14 +117,14 @@ namespace Deployer.Actions
                 {
                     IEnumerable<string> dllPaths;
                     using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
-                        dllPaths = DllsPaths( settings, logger );
+                        dllPaths = RelativizeDllsPaths( settings, logger );
 
                     if( innerErrorCount == 0 )
                     {
                         AssemblyNameDefinition ckCoreVersion = null;
                         using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                         using( logger.OpenGroup( LogLevel.Info, "Check the version of CK.Core in the dll directories" ) )
-                            ckCoreVersion = FindCKCoreVersionIn( dllPaths, logger );
+                            ckCoreVersion = FindSpecificAssembly( "CK.Core", dllPaths, logger );
 
                         if( innerErrorCount == 0 )
                         {
@@ -184,27 +168,27 @@ namespace Deployer.Actions
             }
         }
 
-        AssemblyNameDefinition FindCKCoreVersionIn( IEnumerable<string> dllPaths, IActivityLogger logger )
+        AssemblyNameDefinition FindSpecificAssembly( string assemblyName, IEnumerable<string> dllPaths, IActivityLogger logger )
         {
-            AssemblyNameDefinition assemblyName = null;
+            AssemblyNameDefinition foundAssemblyName = null;
             foreach( var dllPath in dllPaths )
             {
-                using( logger.OpenGroup( LogLevel.Info, "Looking for CK.Core.dll in {0}", dllPath ) )
+                using( logger.OpenGroup( LogLevel.Info, "Looking for {0}.dll in {1}", assemblyName, dllPath ) )
                 {
-                    string ckCorePath =  Directory.EnumerateFiles( dllPath, "CK.Core.dll" ).FirstOrDefault();
-                    if( !string.IsNullOrEmpty( ckCorePath ) )
+                    string foundPath =  Directory.EnumerateFiles( dllPath, string.Format( "{0}.dll", assemblyName ) ).FirstOrDefault();
+                    if( !string.IsNullOrEmpty( foundPath ) )
                     {
-                        logger.Info( "CK.Core found : {0}", Path.GetFullPath( ckCorePath ) );
+                        logger.Info( "{0} found : {1}", assemblyName, Path.GetFullPath( foundPath ) );
                         try
                         {
-                            using( Stream dllStream = File.OpenRead( ckCorePath ) )
+                            using( Stream dllStream = File.OpenRead( foundPath ) )
                             {
                                 AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly( dllStream );
-                                logger.Info( "CK.Core details : {0}", assembly.Name );
-                                if( assemblyName == null )
-                                    assemblyName = assembly.Name;
-                                else if( assemblyName.Version != assembly.Name.Version || assemblyName.PublicKeyToken != assembly.Name.PublicKeyToken )
-                                    logger.Error( "The CK.Core set of dll is not homogene. There is different versions here !" );
+                                logger.Info( "{0} reflected assembly name : {1}", assemblyName, assembly.Name );
+                                if( foundAssemblyName == null )
+                                    foundAssemblyName = assembly.Name;
+                                else if( foundAssemblyName.Version != assembly.Name.Version || foundAssemblyName.PublicKeyToken != assembly.Name.PublicKeyToken )
+                                    logger.Error( "The {0} set of dll is not homogene. There is different versions here !", assemblyName );
                             }
                         }
                         catch( Exception ex )
@@ -215,15 +199,15 @@ namespace Deployer.Actions
                 }
             }
 
-            return assemblyName;
+            return foundAssemblyName;
         }
 
         void UpdateAssemblyRebindingInDBSetupConsoleConfig( ISettings settings, AssemblyNameDefinition ckCoreVersion, IActivityLogger logger )
         {
-            new DBSetup.ConfigFileManipulator( settings, ckCoreVersion, logger ).UpdateConfigurationFile();
+            new DBSetup.ConfigFileManipulator( settings, logger ).ResetAssemblyRebindings( ckCoreVersion );
         }
 
-        IEnumerable<string> DllsPaths( ISettings settings, IActivityLogger logger )
+        IEnumerable<string> RelativizeDllsPaths( ISettings settings, IActivityLogger logger )
         {
             List<string> paths = new List<string>();
             foreach( var path in settings.DllDirectoryPaths )

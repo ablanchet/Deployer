@@ -10,8 +10,6 @@ namespace Deployer.Action
 {
     public interface IAction
     {
-        IEnumerable<string> PatternMatchers { get; }
-
         string Description { get; }
 
         ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger );

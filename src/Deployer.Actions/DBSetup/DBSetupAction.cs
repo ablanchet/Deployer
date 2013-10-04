@@ -27,7 +27,7 @@ namespace Deployer.Actions
             get { return "Run the DBSetup to the configured database"; }
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
             if( extraParameters.Count == 1 ) path = extraParameters[0];
@@ -128,19 +128,16 @@ namespace Deployer.Actions
                 {
                     using( logger.OpenGroup( LogLevel.Info, "DBSetup process" ) )
                     {
-                        // TODO : crunch file paths in order to configure the underlying process correctly
+                        IEnumerable<string> dllPaths;
+                        using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+                            dllPaths = DllsPaths( settings, logger );
 
-                        logger.Warn( "This is a very early version !" );
-                        logger.Warn("The various file paths are not preprocessed");
-                        logger.Warn("This can be very buggy !" );
-
-                        if( CommandLineHelper.PromptBool( "Are you sure you want to run this buggy command ?" ) )
+                        if( innerErrorCount == 0 && CommandLineHelper.PromptBool( "Are you sure you want to run the dbsetup ?" ) )
                         {
-                            logger.Info( "OK, has you want" );
                             string commandline = string.Format( "-v2 \"{1}\" \"\" {2} {3} \"{4}\"",
                                 settings.DBSetupConsolePath,
                                 settings.RootAbsoluteDirectory,
-                                string.Join( ";", settings.DllDirectoryPaths.Select( p => '"' + p + '"' ) ),
+                                string.Join( ";", dllPaths.Select( p => '"' + p + '"' ) ),
                                 string.Join( ";", settings.AssemblieNamesToProcess.Select( p => '"' + p + '"' ) ),
                                 settings.ConnectionString );
 
@@ -164,5 +161,44 @@ namespace Deployer.Actions
                 }
             }
         }
+
+        IEnumerable<string> DllsPaths( ISettings settings, IActivityLogger logger )
+        {
+            List<string> paths = new List<string>();
+            foreach( var path in settings.DllDirectoryPaths )
+            {
+                string commonAncestor = FindCommonPath( Path.GetFullPath( settings.RootAbsoluteDirectory ), Path.GetFullPath( path ) );
+                if( string.IsNullOrEmpty( commonAncestor ) )
+                    logger.Error( "The dll directory path {0} has nothing in common with the root directory {1}", Path.GetFullPath( path ), Path.GetFullPath( settings.RootAbsoluteDirectory ) );
+
+                paths.Add( path.Remove( 0, commonAncestor.Length + 1 ) );
+            }
+
+            return paths;
+        }
+
+        static string FindCommonPath( params string[] paths )
+        {
+            string separator = FileUtil.DirectorySeparatorString;
+
+            string commonPath = String.Empty;
+            List<string> separatedPath = paths
+                .First( str => str.Length == paths.Max( st2 => st2.Length ) )
+                .Split( new string[] { separator }, StringSplitOptions.RemoveEmptyEntries )
+                .ToList();
+
+            foreach( string pathSegment in separatedPath )
+            {
+                if( commonPath.Length == 0 && paths.All( str => str.StartsWith( pathSegment ) ) )
+                    commonPath = pathSegment;
+                else if( paths.All( str => str.StartsWith( commonPath + separator + pathSegment ) ) )
+                    commonPath += separator + pathSegment;
+                else
+                    break;
+            }
+
+            return commonPath;
+        }
+
     }
 }

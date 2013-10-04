@@ -36,12 +36,14 @@ namespace Deployer.Actions
 
         public string FilePath { get; set; }
 
-        IReadOnlyCollection<string> ISettings.DllPaths
+        public string DBSetupConsolePath { get; set; }
+
+        IReadOnlyCollection<string> ISettings.DllDirectoryPaths
         {
             get { return new ReadOnlyCollection<string>( DllPaths.ToList() ); }
         }
 
-        IReadOnlyCollection<string> ISettings.AssembliesToProcess
+        IReadOnlyCollection<string> ISettings.AssemblieNamesToProcess
         {
             get { return new ReadOnlyCollection<string>( AssembliesToProcess.ToList() ); }
         }
@@ -70,7 +72,7 @@ namespace Deployer.Actions
             if( extraParameters.Count == 1 ) path = extraParameters[0];
             try
             {
-                return loader.Load( path );
+                return loader.Load( path, logger );
             }
             catch( Exception ex )
             {
@@ -111,8 +113,9 @@ namespace Deployer.Actions
                     }
                 }
 
-                editableSettings.DllPaths = CommandLineHelper.PromptStringArray( "Enter the dlls paths that you want to use for the dbsetup", IsValidDllPath, settings.IsNew ? (string[])null : settings.DllPaths.ToArray() );
-                editableSettings.AssembliesToProcess = CommandLineHelper.PromptStringArray( "Enter the assembly names that you want to load for the dbsetup", null, settings.IsNew ? (string[])null : settings.AssembliesToProcess.ToArray() );
+                editableSettings.DllPaths = CommandLineHelper.PromptStringArray( "Enter the directory path where you want the dbsetup to look for dlls to process", null, settings.IsNew ? (string[])null : settings.DllDirectoryPaths.ToArray() );
+                editableSettings.AssembliesToProcess = CommandLineHelper.PromptStringArray( "Enter the assembly names that you want to load for the dbsetup", null, settings.IsNew ? (string[])null : settings.AssemblieNamesToProcess.ToArray() );
+                editableSettings.DBSetupConsolePath = CommandLineHelper.PromptString( "Enter the path to the dbsetup console application", settings.IsNew ? (string)null : settings.DBSetupConsolePath );
 
                 if( CommandLineHelper.PromptBool( "Save ?", "yes" ) )
                 {
@@ -132,19 +135,6 @@ namespace Deployer.Actions
                 {
                     logger.Warn( "Setup is cancelled, nothing will be saved." );
                 }
-            }
-        }
-
-        bool IsValidDllPath( string path )
-        {
-            try
-            {
-                string ex = Path.GetExtension( path );
-                return ex == ".dll" && File.Exists( path );
-            }
-            catch( Exception )
-            {
-                return false;
             }
         }
     }

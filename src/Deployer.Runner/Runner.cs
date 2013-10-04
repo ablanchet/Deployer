@@ -8,6 +8,7 @@ using Deployer.Settings.Impl;
 using Deployer.Action;
 using Mono.Options;
 using CK.Core;
+using Deployer.Utils;
 
 namespace Deployer
 {
@@ -16,18 +17,16 @@ namespace Deployer
         IActivityLogger _logger;
 
         ISettingsLoader _settingsLoader;
-        List<ActionWrapper> _actions;
+        IDictionary<Type,ActionWrapper> _actions;
         OptionSet _optionSet;
         ShowHelpAction _helpAction;
-
-        int _errorCount;
 
         public Runner( IActivityLogger logger )
         {
             _logger = logger;
 
             _settingsLoader = new XmlSettingsLoader();
-            _actions = new List<ActionWrapper>();
+            _actions = new Dictionary<Type, ActionWrapper>();
             _optionSet = new OptionSet();
 
             _helpAction = new ShowHelpAction( this );
@@ -45,7 +44,18 @@ namespace Deployer
 
             public IAction UnderlyingAction { get { return _action; } }
 
-            public string Prototype { get { return string.Join( "|", _action.PatternMatchers ); } }
+            public string Prototype
+            {
+                get
+                {
+                    string proto = _action.GetType().Name;
+                    if( proto.ToLowerInvariant().EndsWith( "action" ) )
+                        proto = proto.Substring( 0, proto.Length - 6 );
+
+                    proto = StringHelper.Humanize( proto );
+                    return proto;
+                }
+            }
 
             public bool ShouldRun { get; set; }
         }
@@ -53,7 +63,7 @@ namespace Deployer
         public void RegisterAction( IAction action )
         {
             ActionWrapper wrapper = new ActionWrapper( action );
-            _actions.Add( wrapper );
+            _actions.Add( action.GetType(), wrapper );
 
             _optionSet.Add( wrapper.Prototype, wrapper.UnderlyingAction.Description, v => wrapper.ShouldRun = v != null );
         }
@@ -66,23 +76,28 @@ namespace Deployer
                 return;
             }
 
-            List<string> extraParameters = _optionSet.Parse( arguments );
-
-            ActionWrapper actionToRun = _actions.FirstOrDefault( a => a.ShouldRun );
+            List<string> extraParameters = new List<string>();
+            try
+            {
+                extraParameters = _optionSet.Parse( arguments );
+            }
+            catch( Exception ex )
+            {
+                _logger.Error( ex );
+                _helpAction.Run( this, null, null, _logger );
+                return;
+            }
+            ActionWrapper actionToRun = _actions.Values.FirstOrDefault( a => a.ShouldRun );
             if( actionToRun != null )
             {
                 ISettings settings = null;
-                using( _logger.CatchCounter( ( errorCount ) => _errorCount = errorCount ) )
+
+                int innerErrorCount = 0;
+                using( _logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                     settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, extraParameters, _logger );
 
-                if( settings != null && _errorCount == 0 )
-                {
-                    using( _logger.CatchCounter( ( errorCount ) => _errorCount = errorCount ) )
-                        actionToRun.UnderlyingAction.CheckSettingsValidity( settings, extraParameters, _logger );
-
-                    if( _errorCount == 0 )
-                        actionToRun.UnderlyingAction.Run( this, settings, extraParameters, _logger );
-                }
+                if( settings != null && innerErrorCount == 0 )
+                    RunAction( actionToRun.UnderlyingAction, settings, extraParameters );
             }
             else
             {
@@ -98,6 +113,27 @@ namespace Deployer
             _settingsLoader.Save( xmlSource );
         }
 
+        public void RunSpecificAction<T>( ISettings settings, IList<string> extraParameters )
+            where T : IAction
+        {
+            ActionWrapper actionToRun = null;
+            if( _actions.TryGetValue( typeof( T ), out actionToRun ) )
+            {
+                RunAction( actionToRun.UnderlyingAction, settings, extraParameters );
+            }
+            else
+                _logger.Error( "The action with type {0} cannot be found", typeof( T ) );
+        }
+
+        void RunAction( IAction action, ISettings settings, IList<string> extraParameters )
+        {
+            int innerErrorCount = 0;
+            using( _logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+                action.CheckSettingsValidity( settings, extraParameters, _logger );
+
+            if( innerErrorCount == 0 )
+                action.Run( this, settings, extraParameters, _logger );
+        }
 
         class ShowHelpAction : IAction
         {
@@ -125,7 +161,7 @@ namespace Deployer
 
             public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
             {
-                return loader.Load( null );
+                return loader.Load( null, logger );
             }
 
             public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -136,5 +172,6 @@ namespace Deployer
                 _commandRunner._optionSet.WriteOptionDescriptions( Console.Out );
             }
         }
+
     }
 }

@@ -31,7 +31,7 @@ namespace Deployer.Actions
             if( extraParameters.Count == 1 ) path = extraParameters[0];
             try
             {
-                return loader.Load( path );
+                return loader.Load( path, logger );
             }
             catch( Exception ex )
             {
@@ -65,36 +65,41 @@ namespace Deployer.Actions
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
-            using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
+            string formatedDate = DateTime.Now.ToString( "dd-MM-yyyy HH-mm" );
+            
+            using( LogHelper.ReplicateIn( logger, settings, "Backups", string.Concat( "Backup-", formatedDate, ".log" ) ) )
             {
-                try
+                using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
                 {
-                    conn.Open();
-                    conn.InfoMessage += ( o, e ) =>
+                    try
                     {
-                        logger.Info( e.Message );
-                    };
-
-                    using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Backup.BackupFormat.sql" ) ) )
-                    {
-                        string sqlFile = sr.ReadToEnd();
-                        using( var cmd = conn.CreateCommand() )
+                        conn.Open();
+                        conn.InfoMessage += ( o, e ) =>
                         {
-                            string backupFilename = string.Concat( conn.Database, "-", DateTime.Now.ToString( "dd-MM-yyyy HH-mm" ), ".bak" );
+                            logger.Info( e.Message );
+                        };
 
-                            cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFilename ) );
-                            using( logger.OpenGroup( LogLevel.Info, "Starting backup" ) )
+                        using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Backup.BackupFormat.sql" ) ) )
+                        {
+                            string sqlFile = sr.ReadToEnd();
+                            using( var cmd = conn.CreateCommand() )
                             {
-                                cmd.ExecuteNonQuery();
-                            }
+                                string backupFilename = string.Concat( conn.Database, "-", formatedDate, ".bak" );
 
-                            logger.Info( "Backup finished, check {0} in your backup directory", backupFilename );
+                                cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFilename ) );
+                                using( logger.OpenGroup( LogLevel.Info, "Starting backup of {0}", conn.Database ) )
+                                {
+                                    cmd.ExecuteNonQuery();
+                                }
+
+                                logger.Info( "Backup finished, check {0} in your backup directory", backupFilename );
+                            }
                         }
                     }
-                }
-                catch( Exception ex )
-                {
-                    logger.Error( ex, "Unable to backup the database." );
+                    catch( Exception ex )
+                    {
+                        logger.Error( ex, "Unable to backup the database." );
+                    }
                 }
             }
         }

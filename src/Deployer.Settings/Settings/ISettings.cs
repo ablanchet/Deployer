@@ -18,9 +18,11 @@ namespace Deployer.Settings
 
         string LogDirectory { get; }
 
-        IReadOnlyCollection<string> DllPaths { get; }
+        IReadOnlyCollection<string> DllDirectoryPaths { get; }
 
-        IReadOnlyCollection<string> AssembliesToProcess { get; }
+        IReadOnlyCollection<string> AssemblieNamesToProcess { get; }
+
+        string DBSetupConsolePath { get; }
 
         string ConnectionString { get; }
     }

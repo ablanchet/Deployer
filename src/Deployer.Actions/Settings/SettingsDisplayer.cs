@@ -34,7 +34,7 @@ namespace Deployer.Actions
             if( extraParameters.Count == 1 ) path = extraParameters[0];
             try
             {
-                return loader.Load( path );
+                return loader.Load( path, logger );
             }
             catch( Exception ex )
             {
@@ -52,8 +52,8 @@ namespace Deployer.Actions
                 Console.WriteLine( "Backup directory path : {0}{1}{0}", Environment.NewLine, Path.GetFullPath( settings.BackupDirectory ) );
                 Console.WriteLine( "Log directory path : {0}{1}{0}", Environment.NewLine, Path.GetFullPath( settings.LogDirectory ) );
                 Console.WriteLine( "Root directory : {0}{1}{0}", Environment.NewLine, Path.GetFullPath( settings.RootAbsoluteDirectory ) );
-                Console.WriteLine( "Dlls to process : {0}{1}{0}", Environment.NewLine, settings.DllPaths != null && settings.DllPaths.Count > 0 ? string.Join( Environment.NewLine, settings.DllPaths.Select( p => Path.GetFullPath( p ) ) ) : "(none)" );
-                Console.WriteLine( "Assemblies to process : {0}{1}{0}", Environment.NewLine, settings.AssembliesToProcess != null && settings.AssembliesToProcess.Count > 0 ? string.Join( Environment.NewLine, settings.AssembliesToProcess ) : "(none)" );
+                Console.WriteLine( "Dlls to process : {0}{1}{0}", Environment.NewLine, settings.DllDirectoryPaths != null && settings.DllDirectoryPaths.Count > 0 ? string.Join( Environment.NewLine, settings.DllDirectoryPaths.Select( p => Path.GetFullPath( p ) ) ) : "(none)" );
+                Console.WriteLine( "Assemblies to process : {0}{1}{0}", Environment.NewLine, settings.AssemblieNamesToProcess != null && settings.AssemblieNamesToProcess.Count > 0 ? string.Join( Environment.NewLine, settings.AssemblieNamesToProcess ) : "(none)" );
                 Console.WriteLine( "Connection string : {0}{1}", Environment.NewLine, settings.ConnectionString );
                 DatabaseHelper.TryToConnectToDB( settings.ConnectionString, logger );
             }

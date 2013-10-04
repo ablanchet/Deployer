@@ -31,7 +31,7 @@ namespace Deployer.Actions
             if( extraParameters.Count == 1 ) path = extraParameters[0];
             try
             {
-                return loader.Load( path );
+                return loader.Load( path, logger );
             }
             catch( Exception ex )
             {
@@ -61,51 +61,63 @@ namespace Deployer.Actions
                 else logger.Error( "The backup directory does not exist" );
             }
             else logger.Error( "No backup directory configured" );
-
         }
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
-            using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
+            string formatedDate = DateTime.Now.ToString( "dd-MM-yyyy HH-mm" );
+            if( CommandLineHelper.PromptBool( "Are you sure you want to restore your database ? This cannot be undone !" ) )
             {
-                try
+                using( LogHelper.ReplicateIn( logger, settings, "Restores", string.Concat( "Restore-", formatedDate, ".log" ) ) )
                 {
-                    conn.Open();
-                    conn.InfoMessage += ( o, e ) =>
+                    using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
                     {
-                        logger.Info( e.Message );
-                    };
-
-                    using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Restore.RestoreFormat.sql" ) ) )
-                    {
-                        string sqlFile = sr.ReadToEnd();
-                        using( var cmd = conn.CreateCommand() )
+                        try
                         {
-                            FileInfo backupFile = null;
-
-                            DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( settings.BackupDirectory ) );
-
-                            // find the last backup
-                            foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
+                            conn.Open();
+                            conn.InfoMessage += ( o, e ) =>
                             {
-                                if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
-                                    backupFile = bak;
-                            }
+                                logger.Info( e.Message );
+                            };
 
-                            cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFile.FullName ) );
-                            using( logger.OpenGroup( LogLevel.Info, "Starting restore" ) )
+                            using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Restore.RestoreFormat.sql" ) ) )
                             {
-                                cmd.ExecuteNonQuery();
-                            }
+                                string sqlFile = sr.ReadToEnd();
+                                using( var cmd = conn.CreateCommand() )
+                                {
+                                    FileInfo backupFile = null;
 
-                            logger.Info( "Restore finished" );
+                                    DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( settings.BackupDirectory ) );
+
+                                    // find the last backup
+                                    foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
+                                    {
+                                        if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
+                                            backupFile = bak;
+                                    }
+
+                                    logger.Info( "Backup file to restore : {0}", backupFile.Name );
+
+                                    cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFile.FullName ) );
+                                    using( logger.OpenGroup( LogLevel.Info, "Starting restore of {0}", conn.Database ) )
+                                    {
+                                        cmd.ExecuteNonQuery();
+                                    }
+
+                                    logger.Info( "Restore finished" );
+                                }
+                            }
+                        }
+                        catch( Exception ex )
+                        {
+                            logger.Error( ex, "Unable to restore the database." );
                         }
                     }
                 }
-                catch( Exception ex )
-                {
-                    logger.Error( ex, "Unable to restore the database." );
-                }
+            }
+            else
+            {
+                logger.Info( "Restore aborted" );   
             }
         }
     }

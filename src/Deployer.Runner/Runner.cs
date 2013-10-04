@@ -8,6 +8,7 @@ using Deployer.Settings.Impl;
 using Deployer.Action;
 using Mono.Options;
 using CK.Core;
+using Deployer.Utils;
 
 namespace Deployer
 {
@@ -43,7 +44,18 @@ namespace Deployer
 
             public IAction UnderlyingAction { get { return _action; } }
 
-            public string Prototype { get { return string.Join( "|", _action.PatternMatchers ); } }
+            public string Prototype
+            {
+                get
+                {
+                    string proto = _action.GetType().Name;
+                    if( proto.ToLowerInvariant().EndsWith( "action" ) )
+                        proto = proto.Substring( 0, proto.Length - 6 );
+
+                    proto = StringHelper.Humanize( proto );
+                    return proto;
+                }
+            }
 
             public bool ShouldRun { get; set; }
         }
@@ -64,8 +76,17 @@ namespace Deployer
                 return;
             }
 
-            List<string> extraParameters = _optionSet.Parse( arguments );
-
+            List<string> extraParameters = new List<string>();
+            try
+            {
+                extraParameters = _optionSet.Parse( arguments );
+            }
+            catch( Exception ex )
+            {
+                _logger.Error( ex );
+                _helpAction.Run( this, null, null, _logger );
+                return;
+            }
             ActionWrapper actionToRun = _actions.Values.FirstOrDefault( a => a.ShouldRun );
             if( actionToRun != null )
             {

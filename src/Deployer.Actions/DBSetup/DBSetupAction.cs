@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
@@ -8,10 +9,14 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
 using Deployer.Utils;
+using Deployer.Utils.Rebindings;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace Deployer.Actions
 {
@@ -126,40 +131,96 @@ namespace Deployer.Actions
 
                 if( innerErrorCount == 0 )
                 {
-                    using( logger.OpenGroup( LogLevel.Info, "DBSetup process" ) )
+                    IEnumerable<string> dllPaths;
+                    using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+                        dllPaths = DllsPaths( settings, logger );
+
+                    if( innerErrorCount == 0 )
                     {
-                        IEnumerable<string> dllPaths;
+                        AssemblyNameDefinition ckCoreVersion = null;
                         using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
-                            dllPaths = DllsPaths( settings, logger );
+                        using( logger.OpenGroup( LogLevel.Info, "Check the version of CK.Core in the dll directories" ) )
+                            ckCoreVersion = FindCKCoreVersionIn( dllPaths, logger );
 
-                        if( innerErrorCount == 0 && CommandLineHelper.PromptBool( "Are you sure you want to run the dbsetup ?" ) )
+                        if( innerErrorCount == 0 )
                         {
-                            string commandline = string.Format( "-v2 \"{1}\" \"\" {2} {3} \"{4}\"",
-                                settings.DBSetupConsolePath,
-                                settings.RootAbsoluteDirectory,
-                                string.Join( ";", dllPaths.Select( p => '"' + p + '"' ) ),
-                                string.Join( ";", settings.AssemblieNamesToProcess.Select( p => '"' + p + '"' ) ),
-                                settings.ConnectionString );
+                            if( ckCoreVersion != null )
+                            {
+                                UpdateAssemblyRebindingInDBSetupConsoleConfig( settings, ckCoreVersion, logger );
+                            }
 
-                            ProcessStartInfo processStartInfo = new ProcessStartInfo( settings.DBSetupConsolePath, commandline );
-                            processStartInfo.RedirectStandardOutput = true;
-                            processStartInfo.UseShellExecute = false;
-                            processStartInfo.CreateNoWindow = true;
+                            using( logger.OpenGroup( LogLevel.Info, "DBSetup process" ) )
+                            {
 
-                            Process process = Process.Start( processStartInfo );
+                                if( innerErrorCount == 0 && CommandLineHelper.PromptBool( "Are you sure you want to run the dbsetup ?" ) )
+                                {
+                                    string commandline = string.Format( "-v2 \"{1}\" \"\" {2} {3} \"{4}\"",
+                                        settings.DBSetupConsolePath,
+                                        settings.RootAbsoluteDirectory,
+                                        string.Join( ";", dllPaths.Select( p => '"' + p + '"' ) ),
+                                        string.Join( ";", settings.AssemblieNamesToProcess.Select( p => '"' + p + '"' ) ),
+                                        settings.ConnectionString );
 
-                            logger.Info( process.StandardOutput.ReadToEnd() );
+                                    ProcessStartInfo processStartInfo = new ProcessStartInfo( settings.DBSetupConsolePath, commandline );
+                                    processStartInfo.RedirectStandardOutput = true;
+                                    processStartInfo.UseShellExecute = false;
+                                    processStartInfo.CreateNoWindow = true;
 
-                            process.WaitForExit();
-                            process.Close();
-                        }
-                        else
-                        {
-                            logger.Info( "DBSetup aborted" );
+                                    Process process = Process.Start( processStartInfo );
+
+                                    logger.Info( process.StandardOutput.ReadToEnd() );
+
+                                    process.WaitForExit();
+                                    process.Close();
+                                }
+                                else
+                                {
+                                    logger.Info( "DBSetup aborted" );
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+
+        AssemblyNameDefinition FindCKCoreVersionIn( IEnumerable<string> dllPaths, IActivityLogger logger )
+        {
+            AssemblyNameDefinition assemblyName = null;
+            foreach( var dllPath in dllPaths )
+            {
+                using( logger.OpenGroup( LogLevel.Info, "Looking for CK.Core.dll in {0}", dllPath ) )
+                {
+                    string ckCorePath =  Directory.EnumerateFiles( dllPath, "CK.Core.dll" ).FirstOrDefault();
+                    if( !string.IsNullOrEmpty( ckCorePath ) )
+                    {
+                        logger.Info( "CK.Core found : {0}", Path.GetFullPath( ckCorePath ) );
+                        try
+                        {
+                            using( Stream dllStream = File.OpenRead( ckCorePath ) )
+                            {
+                                AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly( dllStream );
+                                logger.Info( "CK.Core details : {0}", assembly.Name );
+                                if( assemblyName == null )
+                                    assemblyName = assembly.Name;
+                                else if( assemblyName.Version != assembly.Name.Version || assemblyName.PublicKeyToken != assembly.Name.PublicKeyToken )
+                                    logger.Error( "The CK.Core set of dll is not homogene. There is different versions here !" );
+                            }
+                        }
+                        catch( Exception ex )
+                        {
+                            logger.Error( ex );
+                        }
+                    }
+                }
+            }
+
+            return assemblyName;
+        }
+
+        void UpdateAssemblyRebindingInDBSetupConsoleConfig( ISettings settings, AssemblyNameDefinition ckCoreVersion, IActivityLogger logger )
+        {
+            new DBSetup.ConfigFileManipulator( settings, ckCoreVersion, logger ).UpdateConfigurationFile();
         }
 
         IEnumerable<string> DllsPaths( ISettings settings, IActivityLogger logger )
@@ -171,7 +232,9 @@ namespace Deployer.Actions
                 if( string.IsNullOrEmpty( commonAncestor ) )
                     logger.Error( "The dll directory path {0} has nothing in common with the root directory {1}", Path.GetFullPath( path ), Path.GetFullPath( settings.RootAbsoluteDirectory ) );
 
-                paths.Add( path.Remove( 0, commonAncestor.Length + 1 ) );
+                string finalPath = Path.GetFullPath( path ).Remove( 0, commonAncestor.Length + 1 );
+                if( !paths.Contains( finalPath ) )
+                    paths.Add( finalPath );
             }
 
             return paths;

@@ -63,7 +63,7 @@ namespace Deployer.Settings.Impl
             get { return _roAssembliesToProcess; }
         }
 
-        internal void UpdateWith( ISettings newOnes )
+        public void UpdateWith( ISettings newOnes )
         {
             FilePath = newOnes.FilePath;
             RootAbsoluteDirectory = newOnes.RootAbsoluteDirectory;

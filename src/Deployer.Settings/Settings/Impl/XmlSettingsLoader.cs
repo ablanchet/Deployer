@@ -9,7 +9,7 @@ using CK.Core;
 
 namespace Deployer.Settings.Impl
 {
-    internal class XmlSettingsLoader : ISettingsLoader
+    public class XmlSettingsLoader : ISettingsLoader
     {
         public const string DefaultConfigurationFileName = "Deployer.config";
 

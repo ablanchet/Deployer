@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		SharedAssemblyInfo.cs = SharedAssemblyInfo.cs
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Deployer.Settings", "Deployer.Settings\Deployer.Settings.csproj", "{1D9DAE70-CC92-4D31-B7E9-92BEC2848A71}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,10 @@ Global
 		{79967B14-97E6-48B0-99BF-E2AB3F975E2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79967B14-97E6-48B0-99BF-E2AB3F975E2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79967B14-97E6-48B0-99BF-E2AB3F975E2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D9DAE70-CC92-4D31-B7E9-92BEC2848A71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D9DAE70-CC92-4D31-B7E9-92BEC2848A71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D9DAE70-CC92-4D31-B7E9-92BEC2848A71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D9DAE70-CC92-4D31-B7E9-92BEC2848A71}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

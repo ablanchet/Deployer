@@ -53,14 +53,17 @@
     <Compile Include="DatabaseHelper.cs" />
     <Compile Include="LogHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rebindings\AssemblyBindingElement.cs" />
+    <Compile Include="Rebindings\MicrosoftAsmV1.cs" />
+    <Compile Include="StringHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Deployer.Runner\Deployer.Runner.csproj">
-      <Project>{daa49faf-8657-45f6-810d-e6022607afad}</Project>
-      <Name>Deployer.Runner</Name>
+    <ProjectReference Include="..\Deployer.Settings\Deployer.Settings.csproj">
+      <Project>{1d9dae70-cc92-4d31-b7e9-92bec2848a71}</Project>
+      <Name>Deployer.Settings</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

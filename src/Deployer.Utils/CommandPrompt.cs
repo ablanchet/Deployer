@@ -10,14 +10,14 @@ namespace Deployer.Utils
     {
         public static string PromptString( string question, string defaultAnswer = null, Func<string, bool> isValid = null )
         {
-            PrintQuestion( question, defaultAnswer, null, false );
+            PrintQuestion( question, defaultAnswer, null );
             string answer = Console.ReadLine();
             answer = string.IsNullOrEmpty( answer ) ? defaultAnswer : answer;
 
-            if( !string.IsNullOrEmpty( answer ) && (isValid == null || isValid( answer )) )
+            if( isValid == null || isValid( answer ) )
                 return answer;
 
-            PrintWrongAnswer( "a valid string" );
+            PrintWrongAnswer();
             return PromptString( question, defaultAnswer, isValid );
         }
 
@@ -34,14 +34,14 @@ namespace Deployer.Utils
             }
             else
             {
-                PrintWrongAnswer( "an integer" );
+                PrintWrongAnswer();
                 return PromptInt( question, defaultAnswer, isValid );
             }
 
             if( isValid == null || isValid( answer ) )
                 return answer;
 
-            PrintWrongAnswer( "an integer" );
+            PrintWrongAnswer();
             return PromptInt( question, defaultAnswer, isValid );
         }
 
@@ -55,7 +55,7 @@ namespace Deployer.Utils
             if( rawAnswer == "y" || rawAnswer == "yes" ) return true;
             else if( rawAnswer == "n" || rawAnswer == "no" ) return false;
 
-            PrintWrongAnswer( "yes (y) or no (n)" );
+            PrintWrongAnswer();
             return PromptBool( question, defaultAnswer );
         }
 
@@ -71,7 +71,7 @@ namespace Deployer.Utils
                 if( !string.IsNullOrEmpty( answer ) )
                 {
                     if( isValid != null && !isValid( answer ) )
-                        PrintWrongAnswer( "a valid string" );
+                        PrintWrongAnswer();
                     else
                         answers.Add( answer );
                 }
@@ -82,7 +82,7 @@ namespace Deployer.Utils
             {
                 if( defaultAnwser == null || defaultAnwser.Length == 0 )
                 {
-                    PrintWrongAnswer( "at least a valid string" );
+                    PrintWrongAnswer();
                     return PromptStringArray( question, isValid, defaultAnwser );
                 }
                 else return defaultAnwser;
@@ -96,7 +96,7 @@ namespace Deployer.Utils
             Console.Write( question, args );
             if( !string.IsNullOrEmpty( defaultValue ) )
             {
-                Console.Write( " (default: \"{0}\")", defaultValue );
+                Console.Write( " (current: \"{0}\")", defaultValue );
             }
             Console.Write( ": " );
 
@@ -104,11 +104,11 @@ namespace Deployer.Utils
                 Console.Write( Environment.NewLine );
         }
 
-        static void PrintWrongAnswer( string expectedFormat )
+        static void PrintWrongAnswer()
         {
             using( ConsoleHelper.ScopeForegroundColor( ConsoleColor.Red ) )
             {
-                Console.WriteLine( "/!\\ Unrecognized answer, please enter {0}", expectedFormat );
+                Console.WriteLine( "Unrecognized answer" );
             }
         }
     }

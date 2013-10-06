@@ -13,37 +13,58 @@ How to use it
 Just type
 
 
-    Deployer.exe -?
+    Deployer.exe
 
 in any command line and see wich commands are available.
 
 Current there is very basic commands :
 
-* -? : show help
-* -s or --setup : start a command line wizard to build the configuration
-* -b or --backup : try to do brutal backup of a given database (based on the connection string) and save it in a given directory (already based on the connection string)
-* -r or --restore : try to restore the last backup file to the given database. Be careful with that, there no coming back !
+	  -show-help                 Show the program usage. All commands available,
+	                               and their descriptions
+
+	  -backup                    Do a quick backup of the configured database
+
+	  -dbsetup                   Run the DBSetup to the configured database
+
+	  -restore                   Restore the last backup file to the configured
+	                               database
+
+	  -settings-configurator     Configure the application with a nice walkthroug
+	  -settings-displayer        Display the configuration that will be use while
+	                               run and other operations
 
 Next commands to implement are 
 
-1. -db or --db-setup : run another program in order to trigger a database migration (not the easiest command)
-2. -z or --unzipto : unzip a given .zip archive to a given folder (for example, to copy dlls or files in a website directory)
+1. -file-deploy : unzip a given .zip archive to a given folder (for example, to copy dlls or files in a website directory)
 
 Hey, I wanna make my own *action* !
 -----------------------------------
 
 That's pretty easy.
 
-The first step is to implement a new class that implements the **IAction** interface. *Deployer* will automatically load all classes that implements the **IAction** interface available in the **Deployer.Actions** assembly. So if you want your action automatically loaded, implement your action in the right project.
+The first step is to implement a new class that implements the **IAction** interface. *Deployer* will automatically load all classes that implements the **IAction** interface available in the **Deployer.Actions** assembly and in the **Deployer.Actions** namespace. So if you want your action automatically loaded, implement your action in the right project.
 
 Wow there is only one step !
 
-For more informations about actions, just look the **IAction** interface documentation.
+For more information about actions, just look the **IAction** interface documentation.
+
+### Conventions ###
+#### Naming conventions ####
+How the action "command line trigger" like "-show-help" are detected / computed ? Just by processing the class name. For example the -show-help action is implemented by the ShowHelpAction class.
+
+So all actions must implement IAction interface, and must be implemented in the Deployer.Actions namespace. Why is that ? It allow the develop to check if there is no duplicates actions names :)
+#### Error handling ####
+
+The error handling is done via the IActivityLogger. Do not return false or throw a new Exception. Just log something like :
+
+	logger.Error(ex, "Oops an error occurred in this process, see the error details n°{0}", 3712);
+
+And the error will break the rest of the process and will be displayed in the console. 
 
 ### Hum ... And if I want to save some configuration ? ###
 
-1. You'll have to update the **ISettings** interface and its Xml implementation
-2. You'll have to update the SettingsConfigurator action (the command line wizard)
+1. You'll have to update the **ISettings** interface and its XML implementation (or add another implementation)
+2. You'll have to update the SettingsConfiguratorAction (the command line wizard)
 3. And you're done, your configuration will be loaded next time
 
 Contribute

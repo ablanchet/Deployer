@@ -17,17 +17,15 @@ namespace Deployer.Actions.DBSetup
     public class ConfigFileManipulator
     {
         ISettings _settings;
-        AssemblyNameDefinition _ckCoreVersion;
         IActivityLogger _logger;
 
-        public ConfigFileManipulator( ISettings settings, AssemblyNameDefinition ckCoreVersion, IActivityLogger logger )
+        public ConfigFileManipulator( ISettings settings, IActivityLogger logger )
         {
             _settings = settings;
-            _ckCoreVersion = ckCoreVersion;
             _logger = logger;
         }
 
-        public void UpdateConfigurationFile()
+        public void ResetAssemblyRebindings( AssemblyNameDefinition assemblyName )
         {
             XDocument xConfig = null;
             string configPath = string.Concat( _settings.DBSetupConsolePath, ".config" );
@@ -56,35 +54,35 @@ namespace Deployer.Actions.DBSetup
                 xAssemblyBinding = CreateNodeAndAttach( xRuntime, MicrosoftAsmV1.AssemblyBinding );
 
 
-            XElement xCKCoreDependentAssembly = null;
+            XElement xDependentAssembly = null;
             foreach( var dp in xAssemblyBinding.Elements( MicrosoftAsmV1.DependentAssembly ) )
             {
                 var assemblyIdentity = dp.Element( MicrosoftAsmV1.AssemblyIdentity );
                 if( assemblyIdentity != null )
                 {
                     var nameAttr = assemblyIdentity.Attribute( "name" );
-                    if( nameAttr != null && nameAttr.Value == "CK.Core" )
+                    if( nameAttr != null && nameAttr.Value == assemblyName.Name )
                     {
-                        xCKCoreDependentAssembly = dp;
+                        xDependentAssembly = dp;
                         break;
                     }
                 }
             }
 
             AssemblyBindingElement binding = new AssemblyBindingElement();
-            if( xCKCoreDependentAssembly != null )
+            if( xDependentAssembly != null )
             {
-                binding.FromXml( xCKCoreDependentAssembly );
-                xCKCoreDependentAssembly.Remove();
+                binding.FromXml( xDependentAssembly );
+                xDependentAssembly.Remove();
             }
 
-            binding.Name = "CK.Core";
-            binding.OldVersion = string.Format( "{0}-{1}", CK.Core.Util.EmptyVersion.ToString( 4 ), _ckCoreVersion.Version.ToString( 4 ) );
-            binding.NewVersion = _ckCoreVersion.Version.ToString( 4 );
-            binding.PublicKeyToken = BitConverter.ToString( _ckCoreVersion.PublicKeyToken ).Replace( "-", string.Empty );
+            binding.Name = assemblyName.Name;
+            binding.OldVersion = string.Format( "{0}-{1}", Util.EmptyVersion.ToString( 4 ), assemblyName.Version.ToString( 4 ) );
+            binding.NewVersion = assemblyName.Version.ToString( 4 );
+            binding.PublicKeyToken = BitConverter.ToString( assemblyName.PublicKeyToken ).Replace( "-", string.Empty );
 
-            xCKCoreDependentAssembly = binding.ToXml();
-            xAssemblyBinding.Add( xCKCoreDependentAssembly );
+            xDependentAssembly = binding.ToXml();
+            xAssemblyBinding.Add( xDependentAssembly );
 
             xConfig.Save( configPath, SaveOptions.OmitDuplicateNamespaces );
         }

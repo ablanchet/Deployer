@@ -52,11 +52,6 @@ namespace Deployer.Actions
 
     public class SettingsConfigurator : IAction
     {
-        public IEnumerable<string> PatternMatchers
-        {
-            get { return new string[] { "s", "setup" }; }
-        }
-
         public string Description
         {
             get { return "Configure the application with a nice walkthroug"; }
@@ -68,18 +63,7 @@ namespace Deployer.Actions
 
         public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
-            string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
-            try
-            {
-                return loader.Load( path, logger );
-            }
-            catch( Exception ex )
-            {
-                logger.Error( ex, "Unable to load configuration" );
-            }
-
-            return null;
+            return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
         }
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )

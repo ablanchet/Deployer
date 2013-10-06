@@ -19,7 +19,6 @@ namespace Deployer
         ISettingsLoader _settingsLoader;
         IDictionary<Type,ActionWrapper> _actions;
         OptionSet _optionSet;
-        ShowHelpAction _helpAction;
 
         public Runner( IActivityLogger logger )
         {
@@ -29,35 +28,7 @@ namespace Deployer
             _actions = new Dictionary<Type, ActionWrapper>();
             _optionSet = new OptionSet();
 
-            _helpAction = new ShowHelpAction( this );
-            RegisterAction( _helpAction );
-        }
-
-        class ActionWrapper
-        {
-            IAction _action;
-
-            public ActionWrapper( IAction action )
-            {
-                _action = action;
-            }
-
-            public IAction UnderlyingAction { get { return _action; } }
-
-            public string Prototype
-            {
-                get
-                {
-                    string proto = _action.GetType().Name;
-                    if( proto.ToLowerInvariant().EndsWith( "action" ) )
-                        proto = proto.Substring( 0, proto.Length - 6 );
-
-                    proto = StringHelper.Humanize( proto );
-                    return proto;
-                }
-            }
-
-            public bool ShouldRun { get; set; }
+            RegisterAction( new ShowHelpAction( _optionSet ) );
         }
 
         public void RegisterAction( IAction action )
@@ -72,7 +43,7 @@ namespace Deployer
         {
             if( arguments == null || arguments.Length == 0 )
             {
-                _helpAction.Run( this, null, null, _logger );
+                RunSpecificAction<ShowHelpAction>( null, null );
                 return;
             }
 
@@ -84,7 +55,7 @@ namespace Deployer
             catch( Exception ex )
             {
                 _logger.Error( ex );
-                _helpAction.Run( this, null, null, _logger );
+                RunSpecificAction<ShowHelpAction>( null, null );
                 return;
             }
             ActionWrapper actionToRun = _actions.Values.FirstOrDefault( a => a.ShouldRun );
@@ -96,7 +67,7 @@ namespace Deployer
                 using( _logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                     settings = actionToRun.UnderlyingAction.LoadSettings( _settingsLoader, extraParameters, _logger );
 
-                if( settings != null && innerErrorCount == 0 )
+                if( innerErrorCount == 0 )
                     RunAction( actionToRun.UnderlyingAction, settings, extraParameters );
             }
             else
@@ -134,44 +105,5 @@ namespace Deployer
             if( innerErrorCount == 0 )
                 action.Run( this, settings, extraParameters, _logger );
         }
-
-        class ShowHelpAction : IAction
-        {
-            Runner _commandRunner;
-            static string[] _patterns = new string[] { "h", "?", "help" };
-
-            public ShowHelpAction( Runner commandRunner )
-            {
-                _commandRunner = commandRunner;
-            }
-
-            public IEnumerable<string> PatternMatchers
-            {
-                get { return _patterns; }
-            }
-
-            public string Description
-            {
-                get { return "Show the program usage. All commands available, and their descriptions"; }
-            }
-
-            public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
-            {
-            }
-
-            public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
-            {
-                return loader.Load( null, logger );
-            }
-
-            public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
-            {
-                string version = typeof( ShowHelpAction ).Assembly.GetName().Version.ToString( 4 );
-
-                Console.WriteLine( "Deployer (version {0}){1}  Usage informations : ", version, Environment.NewLine );
-                _commandRunner._optionSet.WriteOptionDescriptions( Console.Out );
-            }
-        }
-
     }
 }

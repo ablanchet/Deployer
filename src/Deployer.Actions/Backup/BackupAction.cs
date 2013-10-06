@@ -15,30 +15,14 @@ namespace Deployer.Actions
 {
     public class BackupAction : IAction
     {
-        public IEnumerable<string> PatternMatchers
-        {
-            get { return new string[] { "b", "backup" }; }
-        }
-
         public string Description
         {
             get { return "Do a quick backup of the configured database"; }
         }
 
-        public Settings.ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
+        public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
-            string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
-            try
-            {
-                return loader.Load( path, logger );
-            }
-            catch( Exception ex )
-            {
-                logger.Error( ex, "Unable to load configuration" );
-            }
-
-            return null;
+            return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
         }
 
         public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )

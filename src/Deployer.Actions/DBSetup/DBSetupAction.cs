@@ -145,10 +145,13 @@ namespace Deployer.Actions
                                         string.Join( ";", settings.AssemblieNamesToProcess.Select( p => '"' + p + '"' ) ),
                                         settings.ConnectionString );
 
+                                    logger.Info( "Running this command line {0}{1} {2}", Environment.NewLine, settings.DBSetupConsolePath, commandline );
+
                                     ProcessStartInfo processStartInfo = new ProcessStartInfo( settings.DBSetupConsolePath, commandline );
                                     processStartInfo.RedirectStandardOutput = true;
                                     processStartInfo.UseShellExecute = false;
                                     processStartInfo.CreateNoWindow = true;
+
 
                                     Process process = Process.Start( processStartInfo );
 
@@ -225,6 +228,9 @@ namespace Deployer.Actions
                     logger.Error( "The dll directory path {0} has nothing in common with the root directory {1}", Path.GetFullPath( path ), Path.GetFullPath( settings.RootAbsoluteDirectory ) );
 
                 string finalPath = Path.GetFullPath( path ).Remove( 0, commonAncestor.Length + 1 );
+                if( finalPath.EndsWith( "/" ) || finalPath.EndsWith( "\\" ) )
+                    finalPath = finalPath.Substring( 0, finalPath.Length - 1 );
+
                 if( !paths.Contains( finalPath ) )
                     paths.Add( finalPath );
             }

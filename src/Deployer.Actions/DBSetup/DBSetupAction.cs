@@ -156,6 +156,14 @@ namespace Deployer.Actions
 
                                     process.WaitForExit();
                                     process.Close();
+
+                                    if( !extraParameters.Contains( "--no-refresh" ) )
+                                    {
+                                        using( logger.OpenGroup( LogLevel.Info, "Refresh views" ) )
+                                        {
+                                            RefreshView( settings, logger );
+                                        }
+                                    }
                                 }
                                 else
                                 {
@@ -222,6 +230,40 @@ namespace Deployer.Actions
             }
 
             return paths;
+        }
+
+        void RefreshView( ISettings settings, IActivityLogger logger )
+        {
+            using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
+            {
+                try
+                {
+                    conn.Open();
+                    conn.InfoMessage += ( o, e ) =>
+                    {
+                        logger.Info( e.Message );
+                    };
+
+                    using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.DBSetup.RefreshViews.sql" ) ) )
+                    {
+                        string sqlFile = sr.ReadToEnd();
+                        using( var cmd = conn.CreateCommand() )
+                        {
+                            cmd.CommandText = sqlFile;
+                            using( logger.OpenGroup( LogLevel.Info, "Starting refresh views process" ) )
+                            {
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            logger.Info( "All the database views have been refreshed" );
+                        }
+                    }
+                }
+                catch( Exception ex )
+                {
+                    logger.Error( ex, "Unable to refresh the views." );
+                }
+            }
         }
 
         static string FindCommonPath( params string[] paths )

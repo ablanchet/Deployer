@@ -13,7 +13,7 @@ namespace Deployer.Utils
         public static ISettings TryLoadCustomPathOrDefault( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             string path = null;
-            if( extraParameters.Count == 1 ) path = extraParameters[0];
+            if( extraParameters.Count == 1 && !extraParameters[0].StartsWith( "--" ) ) path = extraParameters[0];
             try
             {
                 return loader.Load( path, logger );

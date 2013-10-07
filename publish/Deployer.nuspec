@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>Deployer</id>
+        <version>0.3.0</version>
+        <title>Deployer</title>
+        <authors>Invenietis OSS</authors>
+        <owners>Invenietis OSS</owners>
+        <licenseUrl>http://www.wtfpl.net/</licenseUrl>
+        <projectUrl>https://github.com/ablanchet/Deployer</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Deployer is a simple Windows console application that try to ease deployment process by automating tasks</description>
+    </metadata>
+    <files>
+        <file src="..\src\Deployer\bin\Debug\CK.Core.dll" target="tools\net45\CK.Core.dll" />
+        <file src="..\src\Deployer\bin\Debug\CK.Core.pdb" target="tools\net45\CK.Core.pdb" />
+        <file src="..\src\Deployer\bin\Debug\CK.Core.xml" target="tools\net45\CK.Core.xml" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Actions.dll" target="tools\net45\Deployer.Actions.dll" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Actions.pdb" target="tools\net45\Deployer.Actions.pdb" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.exe" target="tools\net45\Deployer.exe" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.pdb" target="tools\net45\Deployer.pdb" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Runner.dll" target="tools\net45\Deployer.Runner.dll" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Runner.pdb" target="tools\net45\Deployer.Runner.pdb" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Settings.dll" target="tools\net45\Deployer.Settings.dll" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Settings.pdb" target="tools\net45\Deployer.Settings.pdb" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Utils.dll" target="tools\net45\Deployer.Utils.dll" />
+        <file src="..\src\Deployer\bin\Debug\Deployer.Utils.pdb" target="tools\net45\Deployer.Utils.pdb" />
+        <file src="..\src\Deployer\bin\Debug\Mono.Cecil.dll" target="tools\net45\Mono.Cecil.dll" />
+    </files>
+</package>

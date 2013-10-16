@@ -49,7 +49,7 @@ namespace Deployer.Actions
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
-            string formatedDate = DateTime.Now.ToString( "dd-MM-yyyy HH-mm" );
+            string formatedDate = DateTime.Now.ToFileFormatString();
             
             using( LogHelper.ReplicateIn( logger, settings, "Backups", string.Concat( "Backup-", formatedDate, ".log" ) ) )
             {

@@ -104,7 +104,7 @@ namespace Deployer.Actions
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             int innerErrorCount = 0;
-            using( LogHelper.ReplicateIn( logger, settings, "DBSetups", string.Concat( "DBSetup-", DateTime.Now.ToString( "dd-MM-yyyy HH-mm" ), ".log" ) ) )
+            using( LogHelper.ReplicateIn( logger, settings, "DBSetups", string.Concat( "DBSetup-", DateTime.Now.ToFileFormatString(), ".log" ) ) )
             using( logger.OpenGroup( LogLevel.Info, "DBSetup" ) )
             {
                 using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )

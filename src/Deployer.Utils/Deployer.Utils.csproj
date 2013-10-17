@@ -51,6 +51,7 @@
     <Compile Include="CommandPrompt.cs" />
     <Compile Include="ConfigHelper.cs" />
     <Compile Include="ConsoleHelper.cs" />
+    <Compile Include="DateHelper.cs" />
     <Compile Include="DatabaseHelper.cs" />
     <Compile Include="LogHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

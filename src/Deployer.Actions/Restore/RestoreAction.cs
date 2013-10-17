@@ -10,6 +10,7 @@ using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
 using Deployer.Utils;
+using Mono.Options;
 
 namespace Deployer.Actions
 {
@@ -39,7 +40,8 @@ namespace Deployer.Actions
             {
                 if( Directory.Exists( Path.GetFullPath( settings.BackupDirectory ) ) )
                 {
-                    if( !Directory.EnumerateFiles( Path.GetFullPath( settings.BackupDirectory ), "*.bak" ).Any() )
+                    if( !Directory.EnumerateFiles( Path.GetFullPath( settings.BackupDirectory ), "*.bak" ).Any()
+                        && !Directory.EnumerateFiles( Path.GetFullPath( Path.Combine( settings.BackupDirectory, "WithSpecificNames" ) ) ).Any() )
                         logger.Error( "The backup directory is empty" );
                 }
                 else logger.Error( "The backup directory does not exist" );
@@ -51,23 +53,58 @@ namespace Deployer.Actions
         {
             string formatedDate = DateTime.Now.ToFileFormatString();
 
-            FileInfo backupFile = null;
-            DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( settings.BackupDirectory ) );
+            string baseName = null;
+            string parsedBaseName = null;
+            var options = new OptionSet() { { "from=", v => parsedBaseName = v } };
 
-            // find the last backup
-            using( logger.OpenGroup( LogLevel.Info, "Looking for the last written backup file" ) )
+            try
             {
-                using( logger.OpenGroup( LogLevel.Info, "Available backup files" ) )
+                options.Parse( extraParameters );
+            }
+            catch( Exception ex )
+            {
+                logger.Error( "Error while parsing extra parameters" );
+                logger.Error( ex );
+            }
+
+            if( parsedBaseName != "from=" && parsedBaseName != null )
+                baseName = parsedBaseName;
+
+            FileInfo backupFile = null;
+            string backupDirectoryPath = baseName != null ? Path.Combine( settings.BackupDirectory, "WithSpecificNames" ) : settings.BackupDirectory;
+            DirectoryInfo backupDirectory = new DirectoryInfo( Path.GetFullPath( backupDirectoryPath ) );
+
+            int innerErrorCount = 0;
+            using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+            {
+                if( baseName != null )
                 {
-                    foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
+                    using( logger.OpenGroup( LogLevel.Info, "Looking for a backup file named as {0}", baseName ) )
                     {
-                        logger.Info( bak.Name );
-                        if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
-                            backupFile = bak;
+                        backupFile = backupDirectory.EnumerateFiles( baseName + "*.bak" ).FirstOrDefault();
+                        if( backupFile == null )
+                        {
+                            logger.Error( "No backup file found" );
+                        }
+                    }
+                }
+                else // find the last backup
+                {
+                    using( logger.OpenGroup( LogLevel.Info, "Looking for the last written backup file" ) )
+                    {
+                        using( logger.OpenGroup( LogLevel.Info, "Available backup files" ) )
+                        {
+                            foreach( var bak in backupDirectory.EnumerateFiles( "*.bak" ) )
+                            {
+                                logger.Info( bak.Name );
+                                if( backupFile == null || bak.LastWriteTimeUtc > backupFile.LastWriteTimeUtc )
+                                    backupFile = bak;
+                            }
+                        }
                     }
                 }
 
-                using( logger.OpenGroup( LogLevel.Warn, "Last backup file found. Here are some details :" ) )
+                using( logger.OpenGroup( LogLevel.Warn, "Backup file found. Here are some details :" ) )
                 {
                     logger.Warn( "Filename : {0}", backupFile.Name );
                     logger.Warn( "Creation date : {0}", backupFile.CreationTime );
@@ -75,45 +112,48 @@ namespace Deployer.Actions
                 }
             }
 
-            if( CommandLineHelper.PromptBool( "Are you sure you want to restore your database ? This cannot be undone !" ) )
+            if( innerErrorCount == 0 )
             {
-                using( LogHelper.ReplicateIn( logger, settings, "Restores", string.Concat( "Restore-", formatedDate, ".log" ) ) )
+                if( CommandLineHelper.PromptBool( "Are you sure you want to restore your database ? This cannot be undone !" ) )
                 {
-                    using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
+                    using( LogHelper.ReplicateIn( logger, settings, "Restores", string.Concat( "Restore-", formatedDate, ".log" ) ) )
                     {
-                        try
+                        using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
                         {
-                            conn.Open();
-                            conn.InfoMessage += ( o, e ) =>
+                            try
                             {
-                                logger.Info( e.Message );
-                            };
-
-                            using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Restore.RestoreFormat.sql" ) ) )
-                            {
-                                string sqlFile = sr.ReadToEnd();
-                                using( var cmd = conn.CreateCommand() )
+                                conn.Open();
+                                conn.InfoMessage += ( o, e ) =>
                                 {
-                                    cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFile.FullName ) );
-                                    using( logger.OpenGroup( LogLevel.Info, "Starting restore of {0}", conn.Database ) )
-                                    {
-                                        cmd.ExecuteNonQuery();
-                                    }
+                                    logger.Info( e.Message );
+                                };
 
-                                    logger.Info( "Restore finished" );
+                                using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Restore.RestoreFormat.sql" ) ) )
+                                {
+                                    string sqlFile = sr.ReadToEnd();
+                                    using( var cmd = conn.CreateCommand() )
+                                    {
+                                        cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFile.FullName ) );
+                                        using( logger.OpenGroup( LogLevel.Info, "Starting restore of {0}", conn.Database ) )
+                                        {
+                                            cmd.ExecuteNonQuery();
+                                        }
+
+                                        logger.Info( "Restore finished" );
+                                    }
                                 }
                             }
-                        }
-                        catch( Exception ex )
-                        {
-                            logger.Error( ex, "Unable to restore the database." );
+                            catch( Exception ex )
+                            {
+                                logger.Error( ex, "Unable to restore the database." );
+                            }
                         }
                     }
                 }
-            }
-            else
-            {
-                logger.Info( "Restore aborted" );
+                else
+                {
+                    logger.Info( "Restore aborted" );
+                }
             }
         }
     }

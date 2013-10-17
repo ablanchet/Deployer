@@ -10,6 +10,7 @@ using CK.Core;
 using Deployer.Action;
 using Deployer.Settings;
 using Deployer.Utils;
+using Mono.Options;
 
 namespace Deployer.Actions
 {
@@ -50,7 +51,24 @@ namespace Deployer.Actions
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
             string formatedDate = DateTime.Now.ToFileFormatString();
-            
+
+            string baseName = null;
+            string parsedBaseName = null;
+            var options = new OptionSet() { { "as=", v => parsedBaseName = v } };
+
+            try
+            {
+                options.Parse( extraParameters );
+            }
+            catch( Exception ex )
+            {
+                logger.Error( "Error while parsing extra parameters" );
+                logger.Error( ex );
+            }
+
+            if( parsedBaseName != "as=" && parsedBaseName != null )
+                baseName = parsedBaseName;
+
             using( LogHelper.ReplicateIn( logger, settings, "Backups", string.Concat( "Backup-", formatedDate, ".log" ) ) )
             {
                 using( SqlConnection conn = new SqlConnection( settings.ConnectionString ) )
@@ -68,9 +86,34 @@ namespace Deployer.Actions
                             string sqlFile = sr.ReadToEnd();
                             using( var cmd = conn.CreateCommand() )
                             {
-                                string backupFilename = string.Concat( conn.Database, "-", formatedDate, ".bak" );
+                                string databaseName = baseName != null ? baseName : conn.Database;
+                                string backupFilename = string.Concat( databaseName, "-", formatedDate, ".bak" );
 
-                                cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( settings.BackupDirectory ), backupFilename ) );
+                                string backupDirectory = settings.BackupDirectory;
+                                if( baseName != null )
+                                {
+                                    backupDirectory = Path.Combine( backupDirectory, "WithSpecificNames" );
+                                    if( !Directory.Exists( backupDirectory ) )
+                                    {
+                                        Directory.CreateDirectory( backupDirectory );
+                                    }
+                                    else
+                                    {
+                                        if( Directory.EnumerateFiles( backupDirectory, baseName + "*" ).Any() )
+                                        {
+                                            logger.Warn( "A backup with the same name already exists" );
+                                            if( CommandLineHelper.PromptBool( "A backup with the same name already exists. Are you sure you want to overwrite it ?" ) )
+                                            {
+                                                foreach( var f in Directory.EnumerateFiles( backupDirectory, baseName + "*" ) )
+                                                {
+                                                    File.Delete( f );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                cmd.CommandText = string.Format( sqlFile, conn.Database, Path.Combine( Path.GetFullPath( backupDirectory ), backupFilename ) );
                                 using( logger.OpenGroup( LogLevel.Info, "Starting backup of {0}", conn.Database ) )
                                 {
                                     cmd.ExecuteNonQuery();

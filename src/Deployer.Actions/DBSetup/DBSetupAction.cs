@@ -138,14 +138,14 @@ namespace Deployer.Actions
 
                                 if( innerErrorCount == 0 && CommandLineHelper.PromptBool( "Are you sure you want to run the dbsetup ?" ) )
                                 {
-                                    string commandline = string.Format( "-v2 \"{1}\" \"\" {2} {3} \"{4}\"",
-                                        settings.DBSetupConsolePath,
-                                        settings.RootAbsoluteDirectory,
-                                        string.Join( ";", dllPaths.Select( p => '"' + p + '"' ) ),
-                                        string.Join( ";", settings.AssemblieNamesToProcess.Select( p => '"' + p + '"' ) ),
+                                    string commandline = string.Format( "-v2 \"{1}\" \"\" \"{2}\" \"{3}\" \"{4}\"",
+                                        RemoveTrailingSlash( settings.DBSetupConsolePath ),
+                                        RemoveTrailingSlash( settings.RootAbsoluteDirectory ),
+                                        string.Join( ";", dllPaths ),
+                                        string.Join( ";", settings.AssemblieNamesToProcess ),
                                         settings.ConnectionString );
 
-                                    logger.Info( "Running this command line {0}{1} {2}", Environment.NewLine, settings.DBSetupConsolePath, commandline );
+                                    logger.Info( "Running this command line {0}\"{1}\" {2}", Environment.NewLine, settings.DBSetupConsolePath, commandline );
 
                                     ProcessStartInfo processStartInfo = new ProcessStartInfo( settings.DBSetupConsolePath, commandline );
                                     processStartInfo.RedirectStandardOutput = true;
@@ -227,15 +227,20 @@ namespace Deployer.Actions
                 if( string.IsNullOrEmpty( commonAncestor ) )
                     logger.Error( "The dll directory path {0} has nothing in common with the root directory {1}", Path.GetFullPath( path ), Path.GetFullPath( settings.RootAbsoluteDirectory ) );
 
-                string finalPath = Path.GetFullPath( path ).Remove( 0, commonAncestor.Length + 1 );
-                if( finalPath.EndsWith( "/" ) || finalPath.EndsWith( "\\" ) )
-                    finalPath = finalPath.Substring( 0, finalPath.Length - 1 );
+                string finalPath = RemoveTrailingSlash( Path.GetFullPath( path ).Remove( 0, commonAncestor.Length + 1 ) );
 
                 if( !paths.Contains( finalPath ) )
                     paths.Add( finalPath );
             }
 
             return paths;
+        }
+
+        string RemoveTrailingSlash( string path )
+        {
+            if( path.EndsWith( "/" ) || path.EndsWith( "\\" ) )
+                return path.Substring( 0, path.Length - 1 );
+            return path;
         }
 
         void RefreshView( ISettings settings, IActivityLogger logger )

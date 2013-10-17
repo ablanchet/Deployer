@@ -16,6 +16,8 @@ namespace Deployer.Actions
 {
     public class BackupAction : IAction
     {
+        string _baseName;
+
         public string Description
         {
             get { return "Do a quick backup of the configured database"; }
@@ -46,13 +48,6 @@ namespace Deployer.Actions
             }
             else logger.Error( "No backup directory configured" );
 
-        }
-
-        public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
-        {
-            string formatedDate = DateTime.Now.ToFileFormatString();
-
-            string baseName = null;
             string parsedBaseName = null;
             var options = new OptionSet() { { "as=", v => parsedBaseName = v } };
 
@@ -66,8 +61,14 @@ namespace Deployer.Actions
                 logger.Error( ex );
             }
 
-            if( parsedBaseName != "as=" && parsedBaseName != null )
-                baseName = parsedBaseName;
+            if( !string.IsNullOrWhiteSpace( parsedBaseName ) )
+                _baseName = parsedBaseName;
+
+        }
+
+        public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
+        {
+            string formatedDate = DateTime.Now.ToFileFormatString();
 
             using( LogHelper.ReplicateIn( logger, settings, "Backups", string.Concat( "Backup-", formatedDate, ".log" ) ) )
             {
@@ -81,34 +82,31 @@ namespace Deployer.Actions
                             logger.Info( e.Message );
                         };
 
-                        using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.Backup.BackupFormat.sql" ) ) )
+                        using( StreamReader sr = new StreamReader( Assembly.GetExecutingAssembly().GetManifestResourceStream( "Deployer.Actions.DatabaseInteractions.BackupFormat.sql" ) ) )
                         {
                             string sqlFile = sr.ReadToEnd();
                             using( var cmd = conn.CreateCommand() )
                             {
-                                string databaseName = baseName != null ? baseName : conn.Database;
+                                string databaseName = _baseName != null ? _baseName : conn.Database;
                                 string backupFilename = string.Concat( databaseName, "-", formatedDate, ".bak" );
 
                                 string backupDirectory = settings.BackupDirectory;
-                                if( baseName != null )
+                                if( _baseName != null )
                                 {
-                                    backupDirectory = Path.Combine( backupDirectory, "WithSpecificNames" );
-                                    if( !Directory.Exists( backupDirectory ) )
+                                    backupDirectory = Path.Combine( backupDirectory, SpecificBackup.SpecificNamesDirectory );
+                                    SpecificBackup specific = new SpecificBackup( settings, _baseName );
+
+                                    if( specific.BackupFile != null )
                                     {
-                                        Directory.CreateDirectory( backupDirectory );
-                                    }
-                                    else
-                                    {
-                                        if( Directory.EnumerateFiles( backupDirectory, baseName + "*" ).Any() )
+                                        logger.Warn( "A backup with the same name already exists" );
+                                        if( CommandLineHelper.PromptBool( "A backup with the same name already exists. Are you sure you want to overwrite it ?" ) )
                                         {
-                                            logger.Warn( "A backup with the same name already exists" );
-                                            if( CommandLineHelper.PromptBool( "A backup with the same name already exists. Are you sure you want to overwrite it ?" ) )
-                                            {
-                                                foreach( var f in Directory.EnumerateFiles( backupDirectory, baseName + "*" ) )
-                                                {
-                                                    File.Delete( f );
-                                                }
-                                            }
+                                            specific.BackupFile.Delete();
+                                        }
+                                        else
+                                        {
+                                            logger.Info( "Backup aborted" );
+                                            return;
                                         }
                                     }
                                 }

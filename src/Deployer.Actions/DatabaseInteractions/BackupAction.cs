@@ -61,6 +61,7 @@ namespace Deployer.Actions
                 logger.Error( ex );
             }
 
+            _baseName = null;
             if( !string.IsNullOrWhiteSpace( parsedBaseName ) )
                 _baseName = parsedBaseName;
 

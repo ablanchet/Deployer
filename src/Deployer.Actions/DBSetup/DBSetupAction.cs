@@ -17,11 +17,13 @@ using Deployer.Utils;
 using Deployer.Utils.Rebindings;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Options;
 
 namespace Deployer.Actions
 {
     public class DBSetupAction : IAction
     {
+        string _baseName;
         public string Description
         {
             get { return "Run the DBSetup to the configured database"; }
@@ -99,6 +101,22 @@ namespace Deployer.Actions
             // Check AssemblieNamesToProcess
             if( settings.AssemblieNamesToProcess == null || settings.AssemblieNamesToProcess.Count == 0 )
                 logger.Error( "No assemblieNames to process configured" );
+
+            string parsedBaseName = null;
+            var options = new OptionSet() { { "from=", v => parsedBaseName = v } };
+
+            try
+            {
+                options.Parse( extraParameters );
+            }
+            catch( Exception ex )
+            {
+                logger.Error( "Error while parsing extra parameters" );
+                logger.Error( ex );
+            }
+
+            if( !string.IsNullOrWhiteSpace( parsedBaseName ) )
+                _baseName = parsedBaseName;
         }
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -107,6 +125,8 @@ namespace Deployer.Actions
             using( LogHelper.ReplicateIn( logger, settings, "DBSetups", string.Concat( "DBSetup-", DateTime.Now.ToFileFormatString(), ".log" ) ) )
             using( logger.OpenGroup( LogLevel.Info, "DBSetup" ) )
             {
+                logger.Warn( "You are running this dbsetup from a specific backup named '{0}'", _baseName );
+
                 using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                 using( logger.OpenGroup( LogLevel.Info, "Backup" ) )
                 {
@@ -115,6 +135,15 @@ namespace Deployer.Actions
 
                 if( innerErrorCount == 0 )
                 {
+                    if( _baseName != null )
+                    {
+                        using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+                        using( logger.OpenGroup( LogLevel.Info, "Restoring the specific backup '{0}'", _baseName ) )
+                        {
+                            runner.RunSpecificAction<RestoreAction>( settings, extraParameters );
+                        }
+                    }
+
                     IEnumerable<string> dllPaths;
                     using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                         dllPaths = RelativizeDllsPaths( settings, logger );
@@ -149,13 +178,16 @@ namespace Deployer.Actions
 
                                     ProcessStartInfo processStartInfo = new ProcessStartInfo( settings.DBSetupConsolePath, commandline );
                                     processStartInfo.RedirectStandardOutput = true;
+                                    processStartInfo.RedirectStandardError = true;
                                     processStartInfo.UseShellExecute = false;
                                     processStartInfo.CreateNoWindow = true;
-
 
                                     Process process = Process.Start( processStartInfo );
 
                                     logger.Info( process.StandardOutput.ReadToEnd() );
+                                    string errors = process.StandardError.ReadToEnd();
+                                    if( !string.IsNullOrWhiteSpace( errors ) )
+                                        logger.Error( errors );
 
                                     process.WaitForExit();
                                     process.Close();
@@ -165,6 +197,15 @@ namespace Deployer.Actions
                                         using( logger.OpenGroup( LogLevel.Info, "Refresh views" ) )
                                         {
                                             RefreshView( settings, logger );
+                                        }
+                                    }
+
+                                    if( _baseName != null )
+                                    {
+                                        using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
+                                        using( logger.OpenGroup( LogLevel.Info, "Auto Revert based on backup done just before this dbsetup{0}(because you are running from a specific backup file)", Environment.NewLine ) )
+                                        {
+                                            runner.RunSpecificAction<RestoreAction>( settings, new string[0] );
                                         }
                                     }
                                 }

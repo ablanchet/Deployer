@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>Deployer</id>
-        <version>0.3.1</version>
+        <version>0.4.0</version>
         <title>Deployer</title>
         <authors>Invenietis OSS</authors>
         <owners>Invenietis OSS</owners>

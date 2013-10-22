@@ -17,6 +17,7 @@ namespace Deployer.Actions
     public class RestoreAction : IAction
     {
         string _baseName;
+        SpecificBackup _specific;
 
         public string Description
         {
@@ -64,8 +65,14 @@ namespace Deployer.Actions
             }
 
             _baseName = null;
+            _specific = null;
             if( !string.IsNullOrWhiteSpace( parsedBaseName ) )
+            {
                 _baseName = parsedBaseName;
+                _specific = new SpecificBackup( settings, _baseName );
+                if( _specific.BackupFile == null )
+                    logger.Error( "Unable to find a backup named as '{0}'", _baseName );
+            }
         }
 
         public void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger )
@@ -81,16 +88,7 @@ namespace Deployer.Actions
             {
                 if( _baseName != null )
                 {
-                    SpecificBackup specific = new SpecificBackup( settings, _baseName );
-
-                    using( logger.OpenGroup( LogLevel.Info, "Looking for a backup file named as {0}", _baseName ) )
-                    {
-                        backupFile = specific.BackupFile;
-                        if( backupFile == null )
-                        {
-                            logger.Error( "No backup file found" );
-                        }
-                    }
+                    backupFile = _specific.BackupFile;
                 }
                 else // find the last backup
                 {
@@ -105,20 +103,22 @@ namespace Deployer.Actions
                                     backupFile = bak;
                             }
                         }
+                        if( backupFile == null )
+                            logger.Error( "Unable to find a backup file to use" );
                     }
                 }
+            }
 
+            if( innerErrorCount == 0 )
+            {
                 using( logger.OpenGroup( LogLevel.Warn, "Backup file found. Here are some details :" ) )
                 {
                     logger.Warn( "Filename : {0}", backupFile.Name );
                     logger.Warn( "Creation date : {0}", backupFile.CreationTime );
                     logger.Warn( "Size : {0} mo", backupFile.Length / 1024 / 1024 );
                 }
-            }
 
-            if( innerErrorCount == 0 )
-            {
-                if( CommandLineHelper.PromptBool( "Are you sure you want to restore your database ? This cannot be undone !" ) )
+                if( CommandLineHelper.PromptBool( string.Format( "Are you sure you want to restore your database with the backup file {0} ? This cannot be undone !", backupFile.Name ) ) )
                 {
                     using( LogHelper.ReplicateIn( logger, settings, "Restores", string.Concat( "Restore-", formatedDate, ".log" ) ) )
                     {

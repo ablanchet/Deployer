@@ -125,7 +125,8 @@ namespace Deployer.Actions
             using( LogHelper.ReplicateIn( logger, settings, "DBSetups", string.Concat( "DBSetup-", DateTime.Now.ToFileFormatString(), ".log" ) ) )
             using( logger.OpenGroup( LogLevel.Info, "DBSetup" ) )
             {
-                logger.Warn( "You are running this dbsetup from a specific backup named '{0}'", _baseName );
+                if( _baseName != null )
+                    logger.Warn( "You are running this dbsetup from a specific backup named '{0}'", _baseName );
 
                 using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                 using( logger.OpenGroup( LogLevel.Info, "Backup" ) )

@@ -240,7 +240,7 @@ namespace Deployer.Actions
                                 logger.Info( "{0} reflected assembly name : {1}", assemblyName, assembly.Name );
                                 if( foundAssemblyName == null )
                                     foundAssemblyName = assembly.Name;
-                                else if( foundAssemblyName.Version != assembly.Name.Version || foundAssemblyName.PublicKeyToken != assembly.Name.PublicKeyToken )
+                                else if( foundAssemblyName.ToString() != assembly.Name.ToString() ) // compare based on the tostring values of assembly name
                                     logger.Error( "The {0} set of dll is not homogene. There is different versions here !", assemblyName );
                             }
                         }

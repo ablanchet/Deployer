@@ -42,8 +42,13 @@ namespace Deployer.Action
         {
             string version = typeof( ShowHelpAction ).Assembly.GetName().Version.ToString( 4 );
 
-            Console.WriteLine( "Deployer (version {0}){1}  Usage informations : ", version, Environment.NewLine );
+            Console.WriteLine( "{1}Deployer (version {0}){1}{1}  Usage informations : {1}", version, Environment.NewLine );
             _optionSet.WriteOptionDescriptions( Console.Out );
+        }
+
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return null;
         }
     }
 }

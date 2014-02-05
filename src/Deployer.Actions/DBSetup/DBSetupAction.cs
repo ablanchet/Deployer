@@ -29,6 +29,15 @@ namespace Deployer.Actions
             get { return "Run the DBSetup to the configured database"; }
         }
 
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return new SubOptions[]{
+                new SubOptions(){ ArgumentName = "--from=", Description=@"DBSetup from a specific backup. Backup/Restore/DBSetup/Restore."},
+                new SubOptions(){ ArgumentName = "--no-refresh", Description=@"DBSetup will not refresh views."},
+                new SubOptions(){ ArgumentName = "--on-azure", Description=@"DBSetup target azure database."}
+            };
+        }
+
         public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
@@ -131,7 +140,14 @@ namespace Deployer.Actions
                 using( logger.CatchCounter( ( errorCount ) => innerErrorCount = errorCount ) )
                 using( logger.OpenGroup( LogLevel.Info, "Backup" ) )
                 {
-                    runner.RunSpecificAction<BackupAction>( settings, extraParameters );
+                    if( !extraParameters.Contains( "--on-azure" ) )
+                    {
+                        runner.RunSpecificAction<BackupAction>( settings, extraParameters );
+                    }
+                    else
+                    {
+                        logger.Info( "Run on azure (--on-azure). No backup !" );
+                    }
                 }
 
                 if( innerErrorCount == 0 )

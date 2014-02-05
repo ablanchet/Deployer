@@ -37,6 +37,15 @@ namespace Deployer
             _actions.Add( action.GetType(), wrapper );
 
             _optionSet.Add( wrapper.Prototype, wrapper.UnderlyingAction.Description, v => wrapper.ShouldRun = v != null );
+
+            var subOptions = wrapper.UnderlyingAction.GetSubOptions();
+            if( subOptions != null )
+            {
+                foreach( var item in wrapper.UnderlyingAction.GetSubOptions() )
+                {
+                    _optionSet.Add( wrapper.Prototype + " " + item.ArgumentName, item.Description, v => wrapper.ShouldRun = v != null );
+                }
+            }
         }
 
         public void Run( string[] arguments )

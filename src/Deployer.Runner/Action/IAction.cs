@@ -49,5 +49,11 @@ namespace Deployer.Action
         /// <param name="extraParameters">The extraParameters found in the command line</param>
         /// <param name="logger">The activity logger used to check errors and so on</param>
         void Run( Runner runner, ISettings settings, IList<string> extraParameters, IActivityLogger logger );
+
+        /// <summary>
+        /// Retreave all the sub options to be display in help for this action with all its arguments
+        /// </summary>
+        /// <returns>All the arguments for this action</returns>
+        IEnumerable<SubOptions> GetSubOptions();
     }
 }

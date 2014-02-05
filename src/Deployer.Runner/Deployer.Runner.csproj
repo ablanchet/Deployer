@@ -50,6 +50,7 @@
     <Compile Include="Action\ActionWrapper.cs" />
     <Compile Include="Action\IAction.cs" />
     <Compile Include="Action\ShowHelpAction.cs" />
+    <Compile Include="Action\SubOptions.cs" />
     <Compile Include="Runner.cs" />
     <Compile Include="Tools\Mono.Options\Options.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

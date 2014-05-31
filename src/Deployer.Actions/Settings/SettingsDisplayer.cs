@@ -19,6 +19,11 @@ namespace Deployer.Actions
             get { return "Display the configuration that will be use while run and other operations"; }
         }
 
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return null;
+        }
+
         public void CheckSettingsValidity( Settings.ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
         }

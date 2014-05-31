@@ -20,7 +20,14 @@ namespace Deployer.Actions
 
         public string Description
         {
-            get { return "Do a quick backup of the configured database"; }
+            get { return @"Do a quick backup of the configured database."; }
+        }
+
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return new SubOptions[]{
+                new SubOptions(){ ArgumentName = "--as=", Description=@"Do a quick backup with a specific name for the backup."}
+            };
         }
 
         public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )

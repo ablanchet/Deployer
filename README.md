@@ -19,19 +19,26 @@ in any command line and see wich commands are available.
 
 Current there is very basic commands :
 
-	  -show-help                 Show the program usage. All commands available,
-	                               and their descriptions
-
-	  -backup                    Do a quick backup of the configured database
-
-	  -dbsetup                   Run the DBSetup to the configured database
-
-	  -restore                   Restore the last backup file to the configured
-	                               database
-
-	  -settings-configurator     Configure the application with a nice walkthroug
-	  -settings-displayer        Display the configuration that will be use while
-	                               run and other operations
+	-show-help                 Show the program usage. All commands available,
+	
+							   and their descriptions
+	-backup                    Do a quick backup of the configured database.
+	-backup --as=VALUE         Do a quick backup with a specific name for the
+							   backup.
+							   
+	-dbsetup                   Run the DBSetup to the configured database
+	-dbsetup --from=VALUE      DBSetup from a specific backup. Backup/Restore/
+							   DBSetup/Restore.
+	-dbsetup --no-refresh      DBSetup will not refresh views.
+	-dbsetup --on-azure        DBSetup target azure database.
+	
+	-restore                   Restore the last backup file to the configured
+							   database
+	-restore --from=VALUE      Restore the last backup file with a specific name.
+	
+	-settings-configurator     Configure the application with a nice walkthroug
+	-settings-displayer        Display the configuration that will be use while
+							   run and other operations
 
 Next commands to implement are 
 

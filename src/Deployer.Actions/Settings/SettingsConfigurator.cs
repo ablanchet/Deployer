@@ -57,6 +57,11 @@ namespace Deployer.Actions
             get { return "Configure the application with a nice walkthroug"; }
         }
 
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return null;
+        }
+
         public void CheckSettingsValidity( ISettings settings, IList<string> extraParameters, IActivityLogger logger )
         {
         }

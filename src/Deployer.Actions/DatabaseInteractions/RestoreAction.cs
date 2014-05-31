@@ -24,6 +24,13 @@ namespace Deployer.Actions
             get { return "Restore the last backup file to the configured database"; }
         }
 
+        public IEnumerable<SubOptions> GetSubOptions()
+        {
+            return new SubOptions[]{
+                new SubOptions(){ ArgumentName = "--from=", Description=@"Restore the last backup file with a specific name."}
+            };
+        }
+
         public ISettings LoadSettings( ISettingsLoader loader, IList<string> extraParameters, IActivityLogger logger )
         {
             return ConfigHelper.TryLoadCustomPathOrDefault( loader, extraParameters, logger );
